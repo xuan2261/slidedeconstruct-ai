@@ -6,7 +6,7 @@
 
 前段时间 GitHub 上基于 Nanobanana 等项目生成的 PPT 工具非常火爆，效果惊艳。然而，这些工具大多生成的是整张**静态图片**，对于用户来说，这意味着无法进行细粒度的二次编辑（如修改文字、调整图标位置），实用性受限。
 
-**前置项目[banana-slides](https://github.com/Anionex/banana-slides)或者其他nanobanana生成PPT的场景，为了解决“生成容易编辑难”的痛点，我利用 Gemini 手搓了这个项目。本人技术有限，希望有大佬可以做出更完美的工具。点点Star兄弟们！！**
+**前置项目[banana-slides](https://github.com/Anionex/banana-slides)或者其他nanobanana生成PPT的场景，为了解决“生成容易编辑难”的痛点，我利用 Gemini 手搓了这个项目。本人技术有限，希望有大佬可以做出更完美的工具。点点Star兄弟们！！最新教程：[PPT图片转PPT（可编辑）](https://www.bilibili.com/video/BV167BiBcEQg/)**
 
 本工具旨在通过 AI 视觉技术实现：
 
