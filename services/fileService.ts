@@ -72,7 +72,7 @@ export const processUploadedFiles = async (files: FileList): Promise<FileProcess
                  // We will skip adding images but return a placeholder or throw a friendly error handled by UI.
                  console.warn("PPTX parsing requires backend or heavy WASM. Please convert to PDF.");
                  // We won't crash, just skip. The UI should show a specific warning.
-                 throw new Error("请先将 PPT/PPTX 另存为 PDF 后上传，以获得最佳解析效果。");
+                 throw new Error("Please export PPT/PPTX to PDF before uploading for best parsing results.");
             }
         } catch (e: any) {
             console.error(`Error processing file ${file.name}:`, e);

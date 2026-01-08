@@ -1,130 +1,100 @@
-# PPT 拆解大师 (SlideDeconstruct AI)
+# SlideDeconstruct AI
 
-**PPT 拆解大师** 是一款基于 AI 视觉能力的智能演示文稿反向工程工具。它利用 Google Gemini (或 OpenAI Compatible) 模型，将一张静态的 PPT 截图“拆解”为可编辑的图层（背景、文字、视觉元素），并支持将其转化为矢量形状，最终导出为可编辑的 `.pptx` 源文件。
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![React](https://img.shields.io/badge/React-19.x-blue.svg)](https://reactjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue.svg)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-7.x-purple.svg)](https://vitejs.dev/)
 
-## 📖 项目背景与初衷
+**SlideDeconstruct AI** is an AI-powered presentation reverse engineering tool. It uses Google Gemini (or OpenAI Compatible) vision models to "deconstruct" static PPT screenshots into editable layers (background, text, visual elements), supports vector shape conversion, and exports to editable `.pptx` files.
 
-前段时间 GitHub 上基于 Nanobanana 等项目生成的 PPT 工具非常火爆，效果惊艳。然而，这些工具大多生成的是整张**静态图片**，对于用户来说，这意味着无法进行细粒度的二次编辑（如修改文字、调整图标位置），实用性受限。
+> **Documentation**: See the [docs/](./docs/) folder for detailed technical documentation.
 
-**前置项目[banana-slides](https://github.com/Anionex/banana-slides)或者其他nanobanana生成PPT的场景，为了解决“生成容易编辑难”的痛点，我利用 Gemini 手搓了这个项目。本人技术有限，希望有大佬可以做出更完美的工具。点点Star兄弟们！！最新教程：[PPT图片转PPT（可编辑）](https://www.bilibili.com/video/BV167BiBcEQg/)**
+## Background
 
-本工具旨在通过 AI 视觉技术实现：
+AI-generated PPT tools (e.g., Nanobanana, banana-slides) produce visually stunning slides but output **static images**. This creates an "easy to generate, hard to edit" problem - users cannot modify text, adjust icon positions, or edit individual elements without regenerating entire slides.
 
-1. **图片拆解**：自动移除图片中的文字（保留背景），并提取视觉元素。
-2. **矢量化重构**：尝试将图像中的视觉元素转化为 PPT 原生的矢量形状（如矩形、圆形、箭头等），而非简单的图片贴图。
+**SlideDeconstruct AI** solves this by using AI vision to:
+1. **Image Deconstruction**: Automatically remove text from images (preserving background) and extract visual elements.
+2. **Vector Reconstruction**: Convert image-based visual elements to native PPT vector shapes (rectangles, circles, arrows, etc.).
 
-## ✨ 核心功能
+## Features
 
-* **📂 多格式支持**：支持批量上传 PDF、PNG、JPG 格式的幻灯片（PPT/PPTX 建议先导出为 PDF）。
-* **🧠 智能布局分析**：
-  * 使用 AI 视觉模型精确识别页面中的文本块、视觉元素和背景颜色。
-  * 自动分离文本层与视觉层。
-  * <img width="1889" height="966" alt="9cf4a57d1d1d8ccb31234bf949e1e0f3" src="https://github.com/user-attachments/assets/61c14f4f-7cfd-4192-8f2e-d88f43db0cb6" />
-* **🎨 智能背景修复**：
-  * **自动去字**：在提取文本后，AI 会自动“擦除”原图上的文字，并根据周围纹理修复背景，生成干净的底图。
-  * **手动擦除**：提供“橡皮擦”模式，用户可手动框选区域让 AI 移除多余元素。
-  * <img width="1949" height="1029" alt="f3f6dc298871c20e30ba5727c606a089" src="https://github.com/user-attachments/assets/b562f500-de19-4aa9-8172-c20bca7e033a" />
-* **✏️ 矢量化转换 (Beta)**：尝试将识别到的简单几何图形（矩形、圆形、箭头等）转换为 PPT 原生形状，而非仅仅粘贴图片。
-* **🛠️ 人工校正工作流**：
-  * 提供交互式画布，允许用户在 AI 分析后手动调整识别框、修改元素类型（文本/图片）。
-  * 支持对特定视觉元素进行 AI 重绘或指令修改。
-  * <img width="1768" height="965" alt="18293848302664b396fa37cb85993d28" src="https://github.com/user-attachments/assets/508dd335-c3ed-4794-8216-ab4257faf724" />
-* **📥 一键导出 PPT**：将拆解后的所有元素（文本、背景、图片、形状）按原位置重组，导出为可编辑的 `.pptx` 文件。
-* **⚙️ 多模型支持**：内置设置面板，支持切换 Google Gemini 或 OpenAI (GPT-4o) 作为后端模型。
+- **Multi-Format Upload**: Batch upload PDF, PNG, JPG slides (PPT/PPTX should be exported to PDF first)
+- **AI Layout Analysis**: Precise detection of text blocks, visual elements, and background colors
+- **Smart Text Removal**: AI erases text and repairs background texture automatically
+- **Manual Erasure**: "Eraser" mode for user-defined region removal
+- **Vector Conversion (Beta)**: Convert simple shapes to native PPT vector shapes
+- **Human Correction Workflow**: Interactive canvas for bounding box adjustment and element type modification
+- **PPT Export**: One-click export to editable `.pptx` files
+- **Multi-Model Support**: Google Gemini or OpenAI (GPT-4o) as backend
 
+## Tech Stack
 
+- **Frontend**: React 19, TypeScript
+- **Build Tool**: Vite
+- **Styling**: Tailwind CSS
+- **AI Integration**: Google GenAI SDK (`@google/genai`), OpenAI API Compatible
+- **File Handling**: `pptxgenjs` (PPT generation), `pdfjs-dist` (PDF parsing)
 
-## 🛠️ 技术栈
+## Quick Start
 
-* **Frontend**: React 19, TypeScript
-* **Build Tool**: Vite
-* **Styling**: Tailwind CSS
-* **AI Integration**: Google GenAI SDK (`@google/genai`), OpenAI API Compatible
-* **File Handling**: `pptxgenjs` (PPT生成), `pdfjs-dist` (PDF解析)
+### 1. Prerequisites
 
-## 🚀 快速开始
+Ensure **Node.js** (v18+) is installed locally.
 
-### 1. 环境准备
-
-确保你的本地环境已安装 **Node.js** (推荐 v18+)且**已经在本地克隆或者下载本项目**。
-
-### 2. 安装依赖
+### 2. Install Dependencies
 
 ```bash
 npm install
 ```
 
-### 3. 配置 API Key
+### 3. Configure API Key
 
-你可以通过以下两种方式配置 API Key：
-
-* **方式 A (环境变量)**: 在根目录创建 `.env.local` 文件：
+**Option A (Environment Variable)**: Create `.env.local` in root:
 ```env
-GEMINI_API_KEY=你的_Google_Gemini_Key
+GEMINI_API_KEY=your_Google_Gemini_Key
 ```
 
+**Option B (UI Settings)**: Click the settings icon in the app and enter your API Key and Base URL.
 
-* **方式 B (UI 设置)**: 启动项目后，点击右上角的设置图标，手动输入 API Key 和 Base URL。
-
-### 4. 启动项目
+### 4. Run
 
 ```bash
 npm run dev
 ```
 
-访问 `http://localhost:3000` 开始使用。
+Visit `http://localhost:3000` to start using.
 
-## 📖 操作流程
+## Workflow
 
-使用本软件通常遵循以下 **4步工作流**：
+1. **Upload** - Drag or click to upload PDF/image files. Select pages from the sidebar.
+2. **Analyze** - Click "Analyze Layout". AI identifies page structure.
+3. **Correct** - Blue boxes = text, Orange boxes = images. Drag to resize, right-click to modify type. Click "Confirm and Process".
+4. **Export** - View final result, use erasure/redraw if needed. Click "Export Current Page" or "Export All PPT".
 
-1.  **上传 (Upload)**
-    * 在主页拖拽或点击上传 PDF/图片文件。
-    * 左侧侧边栏会显示页面列表，点击选择要处理的页面。
+## Model Configuration
 
-2.  **分析 (Analyze)**
-    * 在预览界面点击 **“开始分析布局 (Analyze Layout)”**。
-    * AI 将识别页面结构。此过程可能需要几秒钟。
+For best results:
+- **Recognition Model**: `gemini-3-pro-preview` (stronger visual understanding)
+- **Drawing Model**: `gemini-2.5-flash-image` (image-to-image support required)
 
-3.  **校正 (Correct)**
-    * 系统进入“人工校正”模式。
-    * **蓝色框**代表文字，**橙色框**代表图片。
-    * 您可以拖拽调整框的大小，右键点击框修改类型或删除，也可以在背景上拖拽画出新框。
-    * 确认无误后点击 **“确认并处理”**。
+*Note: For text removal/redraw, the model must support Image-to-Image capability.*
 
-4.  **编辑与导出 (Edit & Export)**
-    * 系统会自动生成去除文字的背景图。
-    * **图片模式**：查看最终效果，进行局部擦除或元素重绘。
-    * **矢量模式 (可选)**：点击“矢量编辑”，尝试将图标转为形状。
-    * 点击右上角的 **“导出当前页”** 或 **“导出全部 PPT”** 下载文件。
+## Known Limitations
 
-## ⚙️ 模型配置建议
+- **Text Editing**: OCR extracts text position/content, but direct editing not supported (edit in exported PPT)
+- **Formulas**: LaTeX recognized but may export as plain text (use MathType plugin)
+- **Batch Processing**: Process slides one-by-one to avoid token waste
+- **Session Persistence**: No save/resume - complete workflow before closing
 
-为了获得最佳效果，建议在设置中配置：
+## License
 
-* **识别模型 (Recognition Model)**: `gemini-3-pro-preview` (视觉理解能力更强，能更精准地提取 Box)。
-* **绘图模型 (Drawing Model)**: `gemini-2.5-flash-image` (支持图生图) 必须是支持图生图的大模型。
-* **相信大家能找到这里都有模型的API了**
-* *注意：若使用 Gemini 进行去字或重绘，模型必须支持 Image-to-Image 能力。*
+This project is licensed under the [MIT License](./LICENSE).
 
-## ⚠️ 已知限制
+Copyright © 2025 yyy-OPS. All Rights Reserved.
 
-* **文字修改**: 目前支持 OCR 识别文字位置和内容，但在 Web 端暂不支持直接修改文字内容（可以导出后在 PPT 中修改）。
-* **公式**: 虽然支持识别 LaTeX，但导出到 PPT 时可能会以纯文本形式呈现，需配合 MathType 等插件使用。
-* **批量识别与修改**: 因为每张图片特性并不一致，也为了避免token大量浪费，仅支持用户逐一界面修改。
-* **保存记录**：当前不支持记录保存，需要完成流程才可以保存为PPT，**重要项目一定要记得保存。**
+**Disclaimer**: For learning and research purposes only. Do not use to deconstruct copyrighted commercial PPT templates for profit. Users are responsible for AI service costs.
 
-## 📄 版权与许可特别说明
-
-特别说明：本项目由本人使用 AI 辅助开发。本项目的核心逻辑由本人提出，核心代码、架构设计及功能实现是在 **Google Gemini** 人工智能助手的辅助下完成的。
-
-**License** 本程序遵循 [MIT License](https://www.google.com/search?q=LICENSE) 开源协议。 Copyright © 2025 yyy-OPS. All Rights Reserved.
-本项目开源，欢迎用于学习和研究。除依赖库外，你可以自由修改和分发本项目的代码。
-
----
-
-**免责声明**: 本工具仅供学习交流使用。请勿用于拆解有版权保护的商业 PPT 模板并进行商业盈利。使用 AI 服务产生的费用由用户自行承担。
-**PPT 拆解大师** - 让 PPT 编辑更智能、更高效！ 🎉
-## 🌟 Star History
+## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=yyy-OPS/slidedeconstruct-ai&type=Date)](https://star-history.com/#yyy-OPS/slidedeconstruct-ai&Date)

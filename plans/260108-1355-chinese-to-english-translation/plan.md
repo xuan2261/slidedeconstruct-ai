@@ -1,7 +1,7 @@
 ---
 title: "Chinese to English Translation"
 description: "Translate ~140 Chinese strings to English across 15 files"
-status: in-progress
+status: completed
 priority: P2
 effort: 2h
 branch: main
@@ -33,7 +33,7 @@ Translate all Chinese text to English using direct replacement approach (no i18n
 |-------|-------------|--------|-------|
 | [Phase 01](phase-01-ui-components.md) | Translate UI components | DONE (2026-01-08 16:49) | 8 |
 | [Phase 02](phase-02-app-core.md) | Translate App.tsx | DONE (2026-01-08 17:20) | 1 |
-| [Phase 03](phase-03-config-docs.md) | Translate config, services, docs | pending | 5 |
+| [Phase 03](phase-03-config-docs.md) | Translate config, services, docs | DONE (2026-01-08 18:07) | 5 |
 
 ## Translation Glossary
 
