@@ -117,7 +117,7 @@ const App: React.FC = () => {
               }
           }
       } catch (e: any) {
-          alert(e.message || "文件加载失败");
+          alert(e.message || "Failed to load file");
       } finally {
           setIsProcessing(false);
       }
@@ -134,7 +134,7 @@ const App: React.FC = () => {
       } catch (e: any) {
           updateSlideById(slideId, { 
               status: 'error', 
-              errorDetails: { message: e.message || "无法识别布局", raw: e.rawResponse } 
+              errorDetails: { message: e.message || "Failed to analyze layout", raw: e.rawResponse } 
           });
       }
   };
@@ -163,7 +163,7 @@ const App: React.FC = () => {
               status: 'complete'
           });
       } catch (e: any) {
-          updateActiveSlide({ status: 'error', errorDetails: { message: "最终生成失败", raw: e.message } });
+          updateActiveSlide({ status: 'error', errorDetails: { message: "Final generation failed", raw: e.message } });
       }
   };
 
@@ -338,7 +338,7 @@ const App: React.FC = () => {
               },
               selectedElementId: mapped.length > 0 ? mapped[0].id : null
           });
-      } catch (e) { console.error(e); alert("操作失败"); } finally { setIsProcessing(false); }
+      } catch (e) { console.error(e); alert("Operation failed"); } finally { setIsProcessing(false); }
   };
 
   const handleModifyElement = async (id: string, instruction: string) => {
@@ -381,7 +381,7 @@ const App: React.FC = () => {
                   )
               }
           });
-      } catch (e) { console.error(e); alert("生成失败"); } finally { setIsProcessing(false); }
+      } catch (e) { console.error(e); alert("Generation failed"); } finally { setIsProcessing(false); }
   };
 
   const handleSelectVisualHistory = (elementId: string, historyIndex: number) => {
@@ -469,7 +469,7 @@ const App: React.FC = () => {
               },
               viewMode: 'vector'
           });
-      } catch (e) { console.error(e); alert("矢量转换失败"); } finally { setIsProcessing(false); }
+      } catch (e) { console.error(e); alert("Vector conversion failed"); } finally { setIsProcessing(false); }
   };
 
   const handleRegenerateSingleVector = async (elementId: string) => {
@@ -543,7 +543,7 @@ const App: React.FC = () => {
 
     } catch (e) {
         console.error(e);
-        alert("重新生成失败");
+        alert("Regeneration failed");
     } finally {
         setIsProcessing(false);
     }
@@ -603,7 +603,7 @@ const App: React.FC = () => {
           }
       } catch (e) { 
           console.error(e); 
-          alert("擦除失败"); 
+          alert("Erase failed"); 
       } finally { 
           setIsProcessing(false); 
       }
@@ -635,7 +635,7 @@ const App: React.FC = () => {
     const validSlides = slidesToProcess.filter(s => s.status === 'complete' && s.slideData);
     
     if (validSlides.length === 0) {
-        if (onlyCurrent) alert("当前页面尚未完成处理，无法导出。");
+        if (onlyCurrent) alert("Current page not processed, cannot export.");
         return;
     }
 
@@ -736,14 +736,14 @@ const App: React.FC = () => {
 
       await pptx.writeFile({ fileName });
 
-    } catch (e) { console.error(e); alert("导出失败"); } finally { setIsExporting(false); }
+    } catch (e) { console.error(e); alert("Export failed"); } finally { setIsExporting(false); }
   };
 
   const handleReset = () => {
       // Clear current active slide? Or all? 
       // User likely wants to upload new files or clear workspace.
       // Let's just clear active selection to show upload if empty, or allow add more.
-      if (window.confirm("确定要清空所有页面吗？")) {
+      if (window.confirm("Clear all slides?")) {
         setSlides([]);
         setActiveSlideId(null);
       }
@@ -772,7 +772,7 @@ const App: React.FC = () => {
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold shadow-md">P</div>
           <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-slate-600 dark:from-slate-100 dark:to-slate-300">
-            PPT 拆解大师
+            SlideDeconstruct AI
           </h1>
         </div>
 
@@ -782,14 +782,14 @@ const App: React.FC = () => {
                     onClick={() => updateActiveSlide({ viewMode: 'image' })}
                     className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${activeSlide.viewMode === 'image' ? 'bg-white dark:bg-slate-600 shadow text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'}`}
                 >
-                    图片拆解
+                    Image Mode
                 </button>
                 <button
                     onClick={handleGenerateVectors}
                     className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${activeSlide.viewMode === 'vector' ? 'bg-indigo-600 shadow text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'}`}
                 >
                     {isProcessing && activeSlide.viewMode !== 'vector' && <div className="w-3 h-3 border-2 border-slate-400 border-t-slate-600 rounded-full animate-spin"></div>}
-                    矢量编辑 (Beta)
+                    Vector Mode (Beta)
                 </button>
             </div>
         )}
@@ -801,12 +801,12 @@ const App: React.FC = () => {
                   onClick={() => handleExportPPT(true)}
                   disabled={isExporting || isProcessing}
                   className={`px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md shadow-sm transition-colors flex items-center gap-2 ${isExporting ? 'opacity-70 cursor-wait' : ''}`}
-                  title={activeSlide.viewMode === 'vector' ? "导出当前页 (矢量模式)" : "导出当前页 (图片模式)"}
+                  title={activeSlide.viewMode === 'vector' ? "Export Current (Vector Mode)" : "Export Current (Image Mode)"}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
                   </svg>
-                  导出当前页
+                  Export Current
              </button>
            )}
 
@@ -816,7 +816,7 @@ const App: React.FC = () => {
                   disabled={isExporting || isProcessing}
                   className={`px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md shadow-sm transition-colors flex items-center gap-2 ${isExporting ? 'opacity-70 cursor-wait' : ''}`}
                 >
-                  {isExporting ? '打包中...' : '导出全部 PPT'}
+                  {isExporting ? 'Exporting...' : 'Export All PPT'}
              </button>
            )}
            <button onClick={() => setIsSettingsOpen(true)} className="p-2 text-slate-500 hover:bg-slate-100 rounded-full">
@@ -871,7 +871,7 @@ const App: React.FC = () => {
                                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
                                          </svg>
-                                         开始分析布局 (Analyze Layout)
+                                         Analyze Layout
                                      </button>
                                  </div>
                              </div>
@@ -882,22 +882,22 @@ const App: React.FC = () => {
                     {activeSlide.status === 'analyzing' && (
                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm z-50">
                            <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-3"></div>
-                           <p className="text-slate-600 dark:text-slate-300">分析布局中...</p>
+                           <p className="text-slate-600 dark:text-slate-300">Analyzing layout...</p>
                         </div>
                     )}
                     
                     {activeSlide.status === 'processing_final' && (
                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm z-50">
                            <div className="w-12 h-12 border-4 border-green-200 border-t-green-600 rounded-full animate-spin mb-3"></div>
-                           <p className="text-slate-600 dark:text-slate-300">生成图层中...</p>
+                           <p className="text-slate-600 dark:text-slate-300">Generating layers...</p>
                         </div>
                     )}
 
                     {activeSlide.status === 'error' && (
                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/95 dark:bg-slate-900/95 z-50">
-                           <p className="text-red-500 text-lg mb-2">处理失败</p>
+                           <p className="text-red-500 text-lg mb-2">Processing failed</p>
                            <p className="text-slate-500 mb-4 text-sm">{activeSlide.errorDetails?.message}</p>
-                           <button onClick={() => handleStartAnalysis(activeSlide.id, activeSlide.originalImage)} className="px-4 py-2 bg-blue-600 text-white rounded">重试</button>
+                           <button onClick={() => handleStartAnalysis(activeSlide.id, activeSlide.originalImage)} className="px-4 py-2 bg-blue-600 text-white rounded">Retry</button>
                         </div>
                     )}
 
