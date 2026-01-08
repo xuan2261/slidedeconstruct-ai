@@ -3,6 +3,8 @@
  * Standardizes images for consistent AI analysis
  */
 
+import { BoundingBox } from '../types';
+
 export const DEFAULT_TARGET_WIDTH = 1920;
 export const DEFAULT_TARGET_HEIGHT = 1080;
 
@@ -60,6 +62,55 @@ export const standardizeImage = async (
     // Handle both with and without data URI prefix
     img.src = base64.startsWith('data:') ? base64 : `data:image/png;base64,${base64}`;
   });
+};
+
+/**
+ * Generates a binary mask image from bounding boxes.
+ * Black (0,0,0) = keep, White (255,255,255) = remove/inpaint
+ *
+ * @param boxes - Array of bounding boxes (percentages 0-100)
+ * @param width - Image width in pixels
+ * @param height - Image height in pixels
+ * @param padding - Additional padding around boxes in percentage (default: 1.0)
+ * @returns Base64 encoded PNG mask (without data URI prefix)
+ */
+export const generateMaskImage = (
+  boxes: BoundingBox[],
+  width: number,
+  height: number,
+  padding = 1.0
+): string => {
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+
+  if (!ctx) {
+    throw new Error('Failed to get canvas 2D context for mask generation');
+  }
+
+  // Black background = keep these areas
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, width, height);
+
+  // White regions = areas to inpaint/remove
+  ctx.fillStyle = '#FFFFFF';
+  boxes.forEach((box) => {
+    // Apply padding and convert percentage to pixels
+    const paddedLeft = Math.max(0, box.left - padding);
+    const paddedTop = Math.max(0, box.top - padding);
+    const paddedWidth = Math.min(100 - paddedLeft, box.width + padding * 2);
+    const paddedHeight = Math.min(100 - paddedTop, box.height + padding * 2);
+
+    const x = (paddedLeft / 100) * width;
+    const y = (paddedTop / 100) * height;
+    const w = (paddedWidth / 100) * width;
+    const h = (paddedHeight / 100) * height;
+
+    ctx.fillRect(x, y, w, h);
+  });
+
+  return canvas.toDataURL('image/png').replace(/^data:image\/png;base64,/, '');
 };
 
 /**

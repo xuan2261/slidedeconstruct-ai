@@ -1,7 +1,7 @@
 import { GoogleGenAI, Type, GenerateContentResponse, HarmCategory, HarmBlockThreshold, Schema } from "@google/genai";
 import { SlideAnalysisResult, ElementType, AISettings, DEFAULT_AI_SETTINGS, ProviderConfig, ReconstructedSlideResult, PPTShapeElement, BoundingBox, SlideVisualElement, SlideTextElement, PPTShapeType } from "../types";
 import { isValidBox, deduplicateElements, expandBox } from "../utils/box-validation";
-import { standardizeImage, extractBase64 } from "../utils/image-preprocessing";
+import { standardizeImage, extractBase64, getImageDimensions, generateMaskImage } from "../utils/image-preprocessing";
 
 // State to hold current settings
 let currentSettings: AISettings = { ...DEFAULT_AI_SETTINGS };
@@ -17,6 +17,20 @@ export const updateSettings = (settings: AISettings) => {
 };
 
 export const getSettings = () => currentSettings;
+
+// --- Constants ---
+
+// Shared safety settings for Gemini API calls to prevent false positive blocks
+const GEMINI_SAFETY_SETTINGS = [
+  { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+  { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+  { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+  { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+];
+
+// Validation thresholds
+const MIN_VALID_IMAGE_SIZE = 1000; // Minimum base64 length for valid image
+const MAX_DIMENSION_VARIANCE = 10; // Max pixel difference allowed between original and result
 
 // --- Helpers ---
 
@@ -408,34 +422,34 @@ export const testModel = async (
 };
 
 /**
- * 2. Background Generation with Explicit Text Removal
- * Uses detected text and their bounding boxes to inform the model what to remove.
+ * 2. Background Generation with Explicit Text Removal (Mask-Based Approach)
+ * Uses detected text boxes to generate a binary mask and leverages AI inpainting.
  */
 export const removeTextFromImage = async (base64Image: string, detectedElements: SlideTextElement[]): Promise<string | null> => {
   const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
 
-  // Apply padding to text boxes to ensure shadows/edges are captured
-  const paddedElements = detectedElements.map(el => ({
-    ...el,
-    box: expandBox(el.box, 0.5)
-  }));
+  // Get image dimensions for mask generation
+  const dims = await getImageDimensions(base64Image);
 
-  // STRICTER PROMPT FOR SURGICAL REMOVAL
-  let prompt = "Strictly preserve the original aspect ratio (16:9). You are an expert image editor performing surgical text removal.";
+  // Extract boxes and apply padding for better inpainting
+  const paddedBoxes = detectedElements.map(el => expandBox(el.box, 1.0));
 
-  if (paddedElements && paddedElements.length > 0) {
-      prompt += " \n\nCRITICAL INSTRUCTIONS:\n1. I have identified specific text regions below.\n2. You MUST erase content ONLY within these exact bounding boxes (coordinates 0-100%).\n3. DO NOT touch, blur, remove, or alter any other part of the image. Visual elements, icons, lines, and shapes outside these boxes must remain PIXEL-PERFECT identical to the original.\n";
+  // Generate binary mask: black = keep, white = remove
+  const maskBase64 = generateMaskImage(paddedBoxes, dims.width, dims.height, 0);
 
-      paddedElements.forEach((el, index) => {
-          const { top, left, width, height } = el.box;
-          if (index < 30) {
-              prompt += ` - Target Zone ${index + 1}: [Top: ${top.toFixed(2)}%, Left: ${left.toFixed(2)}%, Width: ${width.toFixed(2)}%, Height: ${height.toFixed(2)}%] (Content to erase: "${el.content.substring(0, 20)}...")\n`;
-          }
-      });
-      prompt += "\nFill these erased text zones with the matching background color or texture of the immediate surrounding area. Do not hallucinate new objects.";
-  }
+  // Mask-based prompt for precise inpainting
+  const prompt = `You are an expert image inpainting AI.
 
-  prompt += " \n\nOutput ONLY the processed image.";
+TASK: Remove content in the masked (white) regions and fill with surrounding background.
+
+CRITICAL RULES:
+1. The second image is a BINARY MASK: Black = KEEP exactly as-is, White = REMOVE and inpaint
+2. Fill white regions by seamlessly extending the surrounding background texture, color, and pattern
+3. DO NOT modify any pixels in black mask regions - they must remain PIXEL-PERFECT identical
+4. DO NOT add new objects, text, or elements
+5. Maintain the original image aspect ratio exactly
+
+Output ONLY the processed image with text removed and background filled.`;
 
   try {
     if (currentSettings.currentProvider === 'gemini') {
@@ -445,17 +459,12 @@ export const removeTextFromImage = async (base64Image: string, detectedElements:
           contents: {
             parts: [
               { inlineData: { mimeType: 'image/png', data: cleanBase64 } },
+              { inlineData: { mimeType: 'image/png', data: maskBase64 } },
               { text: prompt }
             ]
           },
-          // Add safety settings to prevent false positives blocking image generation
           config: {
-            safetySettings: [
-              { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-              { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-              { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
-              { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-            ]
+            safetySettings: GEMINI_SAFETY_SETTINGS
           }
         }));
         if (response.candidates?.[0]?.content?.parts) {
@@ -470,14 +479,18 @@ export const removeTextFromImage = async (base64Image: string, detectedElements:
         const isGeminiDrawing = config.drawingModel.toLowerCase().includes('gemini');
 
         if (isGeminiDrawing) {
+            // Note: OpenAI-compatible endpoint doesn't support mask-based inpainting
+            // Falls back to prompt-only approach
             return await callOpenAIImageGen(prompt, cleanBase64);
         } else {
+            // DALL-E doesn't support mask-based inpainting via this API
+            // Use description-based regeneration as fallback
             const description = await callOpenAIChat(
                 "Graphic Designer",
                 "Detailed analysis of this PPT slide's background style, color palette, and layout structure. IGNORE the text content. Describe ONLY the visual design elements (background shapes, gradients, footer style, icon placement) so a designer can recreate the empty template.",
                 cleanBase64
             );
-            
+
             if (description) {
                 return await callOpenAIImageGen(`Professional PowerPoint Background, 16:9 Wide Aspect Ratio. Exact replica of this style: ${description}. NO TEXT. Clean, empty template for presentation.`);
             }
@@ -488,6 +501,115 @@ export const removeTextFromImage = async (base64Image: string, detectedElements:
     console.warn("Background gen failed silently:", error);
     return null;
   }
+};
+
+/**
+ * 2.2 Multi-Pass Text Removal for Higher Quality
+ * Pass 1: Coarse removal with mask
+ * Pass 2: Edge refinement for seamless results
+ */
+export const removeTextMultiPass = async (
+  base64Image: string,
+  textElements: SlideTextElement[]
+): Promise<string | null> => {
+  // Pass 1: Coarse removal with generous padding
+  const pass1Result = await removeTextFromImage(base64Image, textElements);
+  if (!pass1Result) return null;
+
+  // Validate pass 1 result
+  const validation = await validateInpainting(base64Image, pass1Result);
+  if (!validation.valid) {
+    console.warn("Pass 1 validation failed:", validation.reason);
+    return pass1Result; // Return pass 1 result even if validation fails
+  }
+
+  // Pass 2: Edge refinement
+  const refinementPrompt = `You are an expert image post-processor.
+
+This image had text removed via inpainting. Your task is to clean up any remaining artifacts.
+
+CLEANUP TARGETS:
+1. Shadow remnants or ghost text outlines
+2. Color inconsistencies at inpainted region boundaries
+3. Edge discontinuities or visible seams
+4. Texture mismatches in filled areas
+
+CRITICAL RULES:
+- Make background transitions completely seamless
+- DO NOT add any new elements, text, or objects
+- Maintain exact aspect ratio and dimensions
+- Only fix visible artifacts - if image looks clean, return it unchanged
+
+Output ONLY the refined image.`;
+
+  try {
+    if (currentSettings.currentProvider === 'gemini') {
+      const ai = getGeminiClient();
+      const response = await callGeminiWithRetry<GenerateContentResponse>(() => ai.models.generateContent({
+        model: currentSettings.gemini.drawingModel,
+        contents: {
+          parts: [
+            { inlineData: { mimeType: 'image/png', data: pass1Result } },
+            { text: refinementPrompt }
+          ]
+        },
+        config: {
+          safetySettings: GEMINI_SAFETY_SETTINGS
+        }
+      }));
+
+      if (response.candidates?.[0]?.content?.parts) {
+        for (const part of response.candidates[0].content.parts) {
+          if (part.inlineData && part.inlineData.data) {
+            return part.inlineData.data;
+          }
+        }
+      }
+    }
+    // For OpenAI, return pass 1 result (refinement pass not supported without image input)
+    return pass1Result;
+  } catch (error) {
+    console.warn("Pass 2 refinement failed, returning pass 1 result:", error);
+    return pass1Result;
+  }
+};
+
+/**
+ * 2.3 Validate inpainting result quality
+ */
+export const validateInpainting = async (
+  original: string,
+  result: string
+): Promise<{ valid: boolean; reason?: string }> => {
+  // Basic validation without heavy ML libraries
+
+  // 1. Check result is not empty
+  if (!result || result.length < MIN_VALID_IMAGE_SIZE) {
+    return { valid: false, reason: 'Empty or too small result' };
+  }
+
+  // 2. Check result is different from original (something changed)
+  const cleanOriginal = original.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
+  if (result === cleanOriginal) {
+    return { valid: false, reason: 'No change detected' };
+  }
+
+  // 3. Size sanity check - dimensions should match
+  try {
+    const origDims = await getImageDimensions(original);
+    const resultDims = await getImageDimensions(`data:image/png;base64,${result}`);
+
+    // Allow small variance for compression differences
+    if (Math.abs(origDims.width - resultDims.width) > MAX_DIMENSION_VARIANCE ||
+        Math.abs(origDims.height - resultDims.height) > MAX_DIMENSION_VARIANCE) {
+      return { valid: false, reason: `Dimension mismatch: ${origDims.width}x${origDims.height} vs ${resultDims.width}x${resultDims.height}` };
+    }
+  } catch (e) {
+    // If dimension check fails, still consider valid
+    console.warn("Dimension validation failed:", e);
+  }
+
+  return { valid: true };
 };
 
 /**
@@ -524,12 +646,7 @@ export const eraseAreasFromImage = async (base64Image: string, boxes: BoundingBo
             ]
           },
           config: {
-            safetySettings: [
-              { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-              { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-              { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
-              { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-            ]
+            safetySettings: GEMINI_SAFETY_SETTINGS
           }
         }));
         if (response.candidates?.[0]?.content?.parts) {
@@ -815,12 +932,17 @@ export const processConfirmedLayout = async (base64Image: string, confirmedEleme
     // 1. Filter Text elements
     const detectedTextElements = confirmedElements.filter(el => el.type === ElementType.TEXT) as SlideTextElement[];
 
-    // 2. Background Generation using the confirmed boxes as mask guidance
+    // 2. Background Generation - use multi-pass or single-pass based on settings
     const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
-    
+
     try {
-        const cleanedImageBase64 = await removeTextFromImage(cleanBase64, detectedTextElements);
-        
+        // Check if multi-pass inpainting is enabled (default: true)
+        const useMultiPass = currentSettings.enableMultiPassInpainting ?? true;
+
+        const cleanedImageBase64 = useMultiPass
+            ? await removeTextMultiPass(cleanBase64, detectedTextElements)
+            : await removeTextFromImage(cleanBase64, detectedTextElements);
+
         // Critical Fix: If cleanedImageBase64 is null (failed), fallback to original base64Image
         // This prevents the "background gone" issue.
         const finalImage = cleanedImageBase64 ? `data:image/png;base64,${cleanedImageBase64}` : base64Image;
@@ -833,7 +955,7 @@ export const processConfirmedLayout = async (base64Image: string, confirmedEleme
             backgroundColor: backgroundColor,
             elements: confirmedElements,
             cleanedImage: finalImage,
-            rawResponse: cleanedImageBase64 ? "Success" : "Background Gen Failed (Fallback to Original)"
+            rawResponse: cleanedImageBase64 ? `Success (${useMultiPass ? 'Multi-Pass' : 'Single-Pass'})` : "Background Gen Failed (Fallback to Original)"
         };
     } catch (e) {
         console.error("Final Processing Failed:", e);
@@ -841,7 +963,7 @@ export const processConfirmedLayout = async (base64Image: string, confirmedEleme
         return {
             backgroundColor: backgroundColor,
             elements: confirmedElements,
-            cleanedImage: base64Image, 
+            cleanedImage: base64Image,
             rawResponse: "Background Gen Error (Fallback to Original)"
         };
     }

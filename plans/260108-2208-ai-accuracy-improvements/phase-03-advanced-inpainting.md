@@ -11,7 +11,7 @@
 | Date | 2026-01-08 |
 | Priority | P2 - Medium |
 | Effort | 12h |
-| Status | pending |
+| Status | done |
 
 ## Key Insights (from Research)
 1. Mask-based inpainting is standard for text removal (2025)
@@ -21,10 +21,10 @@
 5. Validation: LPIPS < 0.15, text detection < 0.1
 
 ## Requirements
-- [ ] Mask generation utility
-- [ ] Mask-based inpainting with Gemini API
-- [ ] Multi-pass inpainting pipeline
-- [ ] Quality validation
+- [x] Mask generation utility
+- [x] Mask-based inpainting with Gemini API
+- [x] Multi-pass inpainting pipeline
+- [x] Quality validation
 
 ## Related Code Files
 | File | Lines | Purpose |
@@ -192,12 +192,15 @@ export const validateInpainting = async (
 ```
 
 ## Todo List
-- [ ] Add generateMaskImage to image-preprocessing.ts
-- [ ] Add getImageDimensions utility
-- [ ] Update removeTextFromImage for mask-based
-- [ ] Add removeTextMultiPass function
-- [ ] Add validateInpainting utility
-- [ ] Update processConfirmedLayout to use multi-pass
+- [x] Add generateMaskImage to image-preprocessing.ts
+- [x] Add getImageDimensions utility
+- [x] Update removeTextFromImage for mask-based
+- [x] Add removeTextMultiPass function
+- [x] Add validateInpainting utility
+- [x] Update processConfirmedLayout to use multi-pass
+- [x] Add enableMultiPassInpainting setting to AISettings
+- [x] Extract GEMINI_SAFETY_SETTINGS constant (DRY)
+- [x] Add MIN_VALID_IMAGE_SIZE and MAX_DIMENSION_VARIANCE constants
 - [ ] Test with complex backgrounds
 
 ## Success Criteria

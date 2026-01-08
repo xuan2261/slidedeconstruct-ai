@@ -64,6 +64,7 @@ export interface AISettings {
   gemini: ProviderConfig;
   openai: ProviderConfig;
   confidenceThreshold: number; // 0-1, filter elements below this confidence
+  enableMultiPassInpainting: boolean; // Enable 2-pass inpainting for higher quality (doubles API cost)
 }
 
 export const DEFAULT_AI_SETTINGS: AISettings = {
@@ -81,6 +82,7 @@ export const DEFAULT_AI_SETTINGS: AISettings = {
     drawingModel: 'dall-e-3',
   },
   confidenceThreshold: 0.6,
+  enableMultiPassInpainting: true, // Default enabled for best quality
 };
 
 // --- Vector / Reconstructed Types ---

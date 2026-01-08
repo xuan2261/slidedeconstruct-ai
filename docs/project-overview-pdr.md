@@ -6,6 +6,7 @@
 |-------|-------|
 | Name | SlideDeconstruct AI |
 | Version | 1.0.0 |
+| Year | 2026 |
 | License | MIT |
 | Author | yyy-OPS |
 
@@ -48,9 +49,11 @@ The result exports as a fully editable `.pptx` file.
 - Identifies visual elements (icons, shapes, images)
 - Extracts dominant background color
 
-### 3. Smart Text Removal
-- AI erases text from original image
-- Repairs background texture/color
+### 3. Smart Text Removal (Advanced Inpainting)
+- **Mask-Based Inpainting**: Binary mask (black=keep, white=remove) for precise text removal
+- **Multi-Pass Processing**: Pass 1 coarse removal, Pass 2 edge refinement
+- **Validation**: Checks result size, dimensions, and actual changes
+- AI repairs background texture/color seamlessly
 - Preserves visual elements untouched
 
 ### 4. Human Correction Workflow
@@ -92,7 +95,8 @@ The result exports as a fully editable `.pptx` file.
 | FR-01 | Upload PDF/PNG/JPG files | High | Done |
 | FR-02 | AI layout analysis with bounding boxes | High | Done |
 | FR-03 | Human correction interface | High | Done |
-| FR-04 | Text removal from background | High | Done |
+| FR-04 | Text removal from background (mask-based inpainting) | High | Done |
+| FR-04a | Multi-pass inpainting with validation | High | Done |
 | FR-05 | Manual erasure mode | Medium | Done |
 | FR-06 | Vector shape conversion | Medium | Beta |
 | FR-07 | Export to .pptx | High | Done |
@@ -118,6 +122,13 @@ The result exports as a fully editable `.pptx` file.
 - **PPTX Input**: Not supported (must convert to PDF first)
 - **Session Persistence**: Not implemented (data lost on refresh)
 
+### Configuration Options
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `confidenceThreshold` | number | 0.6 | Filter elements below this confidence (0-1) |
+| `enableMultiPassInpainting` | boolean | true | Enable 2-pass inpainting for higher quality (doubles API cost) |
+
 ### Known Limitations
 
 | Limitation | Impact | Workaround |
@@ -131,20 +142,26 @@ The result exports as a fully editable `.pptx` file.
 
 ## Future Roadmap
 
-### Phase 1 - Stability
+### Phase 1 - Stability (Planned)
 - [ ] Session persistence (IndexedDB)
 - [ ] Better error handling for API failures
 - [ ] Progress indicators for batch operations
 
-### Phase 2 - Editing
+### Phase 2 - Editing (Planned)
 - [ ] In-app text content editing
 - [ ] Font selection for text elements
 - [ ] Color picker for shapes
 
-### Phase 3 - Advanced
+### Phase 3 - Advanced (Future)
 - [ ] Backend API option for enterprise
 - [ ] Team collaboration features
 - [ ] Template library integration
+
+### Completed Milestones
+- [x] Phase 3: Advanced Inpainting - mask-based removal, multi-pass, validation (Jan 2026)
+- [x] UI localization: Chinese to English (Jan 2026)
+- [x] All core features implemented (FR-01 to FR-11)
+- [x] Multi-provider AI support (Gemini + OpenAI)
 
 ---
 
