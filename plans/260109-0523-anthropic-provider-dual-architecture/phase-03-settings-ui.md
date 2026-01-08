@@ -10,8 +10,9 @@
 | Field | Value |
 |-------|-------|
 | Priority | P1 |
-| Status | pending |
+| Status | ✅ DONE |
 | Effort | 1h |
+| Completed | 2026-01-09 06:40 |
 | Description | Add Anthropic settings tab and per-task provider dropdowns |
 
 ## Key Insights
@@ -23,12 +24,12 @@
 
 ## Requirements
 
-- [ ] Add Anthropic tab to settings modal
-- [ ] Add Recognition Provider dropdown
-- [ ] Add Drawing Provider dropdown
-- [ ] Remove/deprecate single "Active Provider" dropdown
-- [ ] Update tab type to include 'anthropic'
-- [ ] Add Anthropic-specific tip text
+- [x] Add Anthropic tab to settings modal
+- [x] Add Recognition Provider dropdown
+- [x] Add Drawing Provider dropdown
+- [x] Remove/deprecate single "Active Provider" dropdown
+- [x] Update tab type to include 'anthropic'
+- [x] Add Anthropic-specific tip text
 
 ## Related Code Files
 
@@ -194,23 +195,23 @@ placeholder={
 
 ## Todo List
 
-- [ ] Update `activeTab` type to include 'anthropic'
-- [ ] Replace single provider dropdown with Recognition/Drawing dropdowns
-- [ ] Add Anthropic tab button
-- [ ] Update `handleTabChange` for anthropic
-- [ ] Update API key label for anthropic
-- [ ] Update Base URL placeholder for anthropic
-- [ ] Update tip text for anthropic
-- [ ] Test tab switching works correctly
-- [ ] Test provider dropdowns save correctly
+- [x] Update `activeTab` type to include 'anthropic'
+- [x] Replace single provider dropdown with Recognition/Drawing dropdowns
+- [x] Add Anthropic tab button
+- [x] Update `handleTabChange` for anthropic
+- [x] Update API key label for anthropic
+- [x] Update Base URL placeholder for anthropic
+- [x] Update tip text for anthropic
+- [x] Test tab switching works correctly
+- [x] Test provider dropdowns save correctly
 
 ## Success Criteria
 
-- [ ] Anthropic tab visible and clickable
-- [ ] Recognition/Drawing dropdowns functional
-- [ ] Settings save and load correctly with new fields
-- [ ] Tab styling consistent with existing tabs
-- [ ] No React warnings or errors
+- [x] Anthropic tab visible and clickable
+- [x] Recognition/Drawing dropdowns functional
+- [x] Settings save and load correctly with new fields
+- [x] Tab styling consistent with existing tabs
+- [x] No React warnings or errors
 
 ## Risk Assessment
 

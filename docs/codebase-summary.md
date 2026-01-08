@@ -78,11 +78,18 @@ Main application orchestrator.
 Modal for AI provider configuration.
 
 **Features:**
-- Provider tabs (Gemini, OpenAI)
-- API key, base URL, model name inputs
+- Provider tabs (Gemini, OpenAI, Anthropic) with accessibility (role="tab", aria-selected)
+- Per-task provider dropdowns: Recognition provider, Drawing provider
+- API key, base URL, model name inputs per provider
 - Connection test per model type
 - Hybrid detection settings (beta) - Phase 4
 - Save to localStorage
+
+**Phase 3 Updates:**
+- Added Anthropic tab
+- Per-task provider selection (Recognition/Drawing tasks)
+- Improved accessibility attributes
+- Uses shared `ProviderType` from types.ts
 
 ---
 
