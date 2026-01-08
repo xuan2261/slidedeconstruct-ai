@@ -22,6 +22,7 @@ export interface SlideTextElement {
     color: string; // Approximate hex
     alignment: 'left' | 'center' | 'right';
   };
+  confidence?: number; // 0-1, AI confidence in detection accuracy
   isHidden?: boolean;
 }
 
@@ -31,11 +32,12 @@ export interface SlideVisualElement {
   description: string;
   box: BoundingBox;
   originalBox: BoundingBox; // The original position for correct background cropping
+  confidence?: number; // 0-1, AI confidence in detection accuracy
   isHidden?: boolean;
   customImage?: string; // Base64 of currently active image
   originalId?: string; // Link back to original element for regeneration
-  
-  // NEW: History Management
+
+  // History Management
   history?: string[]; // Array of base64 strings representing versions
   historyIndex?: number; // Current active index in history
 }
@@ -61,6 +63,7 @@ export interface AISettings {
   currentProvider: 'gemini' | 'openai';
   gemini: ProviderConfig;
   openai: ProviderConfig;
+  confidenceThreshold: number; // 0-1, filter elements below this confidence
 }
 
 export const DEFAULT_AI_SETTINGS: AISettings = {
@@ -76,7 +79,8 @@ export const DEFAULT_AI_SETTINGS: AISettings = {
     baseUrl: 'https://api.openai.com/v1',
     recognitionModel: 'gpt-4o',
     drawingModel: 'dall-e-3',
-  }
+  },
+  confidenceThreshold: 0.6,
 };
 
 // --- Vector / Reconstructed Types ---

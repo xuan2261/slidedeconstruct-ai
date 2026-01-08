@@ -1,6 +1,7 @@
 import { GoogleGenAI, Type, GenerateContentResponse, HarmCategory, HarmBlockThreshold, Schema } from "@google/genai";
 import { SlideAnalysisResult, ElementType, AISettings, DEFAULT_AI_SETTINGS, ProviderConfig, ReconstructedSlideResult, PPTShapeElement, BoundingBox, SlideVisualElement, SlideTextElement, PPTShapeType } from "../types";
 import { isValidBox, deduplicateElements, expandBox } from "../utils/box-validation";
+import { standardizeImage, extractBase64 } from "../utils/image-preprocessing";
 
 // State to hold current settings
 let currentSettings: AISettings = { ...DEFAULT_AI_SETTINGS };
@@ -448,12 +449,14 @@ export const removeTextFromImage = async (base64Image: string, detectedElements:
             ]
           },
           // Add safety settings to prevent false positives blocking image generation
-          safetySettings: [
+          config: {
+            safetySettings: [
               { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
               { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
               { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
               { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-          ]
+            ]
+          }
         }));
         if (response.candidates?.[0]?.content?.parts) {
             for (const part of response.candidates[0].content.parts) {
@@ -520,12 +523,14 @@ export const eraseAreasFromImage = async (base64Image: string, boxes: BoundingBo
               { text: prompt }
             ]
           },
-          safetySettings: [
+          config: {
+            safetySettings: [
               { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
               { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
               { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
               { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-          ]
+            ]
+          }
         }));
         if (response.candidates?.[0]?.content?.parts) {
             for (const part of response.candidates[0].content.parts) {
@@ -564,12 +569,14 @@ export const regenerateVisualElement = async (croppedBase64: string, instruction
                { text: `Edit this image: ${instruction}. Maintain exact aspect ratio and style. Output image only.` }
              ]
            },
-           safetySettings: [
-              { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-              { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-              { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
-              { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-          ]
+           config: {
+             safetySettings: [
+               { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+               { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+               { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+               { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+             ]
+           }
          }));
          if (response.candidates?.[0]?.content?.parts) {
            for (const part of response.candidates[0].content.parts) {
@@ -647,6 +654,7 @@ const processImageSchema: Schema = {
         type: Type.OBJECT,
         properties: {
           type: { type: Type.STRING, enum: [ElementType.TEXT, ElementType.VISUAL] },
+          confidence: { type: Type.NUMBER }, // 0-1 confidence score
           content: { type: Type.STRING },
           description: { type: Type.STRING },
           box: {
@@ -669,34 +677,67 @@ const processImageSchema: Schema = {
              }
           }
         },
-        required: ["type", "box"],
+        required: ["type", "box", "confidence"],
       },
     },
   },
   required: ["elements", "backgroundColor"],
 };
 
+// Confidence threshold for filtering low-confidence detections (uses configurable setting)
+const getConfidenceThreshold = () => currentSettings.confidenceThreshold ?? 0.6;
+
+// Clamp confidence value to valid [0,1] range
+const clampConfidence = (value: number | undefined): number => {
+  if (value === undefined) return 0.5; // Default to uncertain if not provided
+  return Math.max(0, Math.min(1, value));
+};
+
 // --- NEW FUNCTION: STEP 1 - LAYOUT ANALYSIS ---
 export const analyzeLayout = async (base64Image: string): Promise<SlideAnalysisResult> => {
-  const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
+  // Preprocess image to standardized resolution for consistent analysis
+  const standardizedImage = await standardizeImage(base64Image);
+  const cleanBase64 = extractBase64(standardizedImage);
 
+  // Few-shot enhanced prompt for improved accuracy
   const prompt = `
-    Analyze the layout of this PPT slide using STRICT GEOMETRY.
+You are a precise document layout analyzer.
 
-    1. **Background**: Identify the dominant solid background color.
-    2. **Elements Detection**: Identify ALL bounding boxes.
+TASK: Detect all text and visual elements in this PowerPoint slide.
 
-    COORDINATE FORMAT (CRITICAL):
-    - All values MUST be PERCENTAGES (0-100)
-    - Example: { "top": 15.5, "left": 10.2, "width": 50.0, "height": 20.1 }
-    - DO NOT use 0-1 normalized values
-    - DO NOT use 0-1000 pixel values
+COORDINATE FORMAT:
+- All values are PERCENTAGES (0-100), NOT pixels
+- Use decimal precision (e.g., 15.5)
 
-    BOUNDING BOX RULES:
-    - Draw the TIGHTEST possible bounding box around the actual visible pixels.
-    - EXCLUDE whitespace, transparent padding, or empty areas around icons/text.
-    - If an element is at coordinates [10, 10], do NOT say [0, 0] just to be safe. Be precise.
-    - Use decimal values (e.g. 15.5) for higher precision.
+EXAMPLE OUTPUT:
+{
+  "backgroundColor": "#1a1a2e",
+  "elements": [
+    {
+      "type": "TEXT",
+      "content": "Welcome to Our Company",
+      "confidence": 0.95,
+      "box": { "top": 8.5, "left": 5.0, "width": 90.0, "height": 12.0 },
+      "style": { "fontSize": "title", "fontWeight": "bold", "color": "#ffffff", "alignment": "center" }
+    },
+    {
+      "type": "VISUAL",
+      "description": "Blue circular icon with checkmark",
+      "confidence": 0.9,
+      "box": { "top": 30.0, "left": 10.0, "width": 8.0, "height": 14.0 }
+    }
+  ]
+}
+
+RULES:
+1. TEXT = readable characters, numbers, symbols
+2. VISUAL = icons, shapes, images, charts (NOT text)
+3. confidence: 1.0 = certain, 0.5 = uncertain, give accurate confidence based on clarity
+4. Include ALL visible elements
+5. Draw TIGHT bounding boxes around actual content, no extra padding
+6. Use decimal values for precision
+
+NOW ANALYZE THE PROVIDED IMAGE:
   `;
 
   let jsonText = "";
@@ -713,28 +754,29 @@ export const analyzeLayout = async (base64Image: string): Promise<SlideAnalysisR
         }));
         jsonText = analysisResponse.text || "";
     } else {
-        // OpenAI Prompt - Explicit JSON Example instead of Schema Object
+        // OpenAI Prompt - Explicit JSON Example with confidence field
         const openAIPrompt = `${prompt}
-        
+
         Strictly output VALID JSON with this structure (no markdown code blocks):
         {
           "backgroundColor": "#ffffff",
           "elements": [
             {
-              "type": "TEXT", // or "VISUAL"
+              "type": "TEXT",
               "content": "string (for text)",
               "description": "string (for visual)",
+              "confidence": 0.9,
               "box": { "top": 10.5, "left": 10.2, "width": 50.0, "height": 20.1 },
               "style": {
-                "fontSize": "medium", // small, medium, large, title
-                "fontWeight": "normal", // normal, bold
+                "fontSize": "medium",
+                "fontWeight": "normal",
                 "color": "#000000",
                 "alignment": "left"
               }
             }
           ]
         }`;
-        
+
         jsonText = await callOpenAIChat("JSON Generator", openAIPrompt, cleanBase64, true);
     }
 
@@ -742,10 +784,16 @@ export const analyzeLayout = async (base64Image: string): Promise<SlideAnalysisR
     const analysisData = tryParseJSON(cleanedJson);
     const rawElements = findElementsArray(analysisData);
 
-    // Apply normalization, validation, and deduplication
+    // Apply normalization, validation, confidence clamping/filtering, and deduplication
     const processedElements = rawElements
-      .map((el: any, idx: number) => normalizeElement(el, idx))
-      .filter((el: any) => isValidBox(el.box));
+      .map((el: any, idx: number) => {
+        const normalized = normalizeElement(el, idx);
+        // Clamp confidence to [0,1] range with 0.5 default
+        normalized.confidence = clampConfidence(el.confidence);
+        return normalized;
+      })
+      .filter((el: any) => isValidBox(el.box))
+      .filter((el: any) => el.confidence >= getConfidenceThreshold());
     const finalElements = deduplicateElements(processedElements);
 
     return {

@@ -10,7 +10,7 @@
 | Date | 2026-01-08 |
 | Priority | P1 - High |
 | Effort | 8h |
-| Status | pending |
+| Status | done |
 
 ## Key Insights
 1. Few-shot examples significantly improve bounding box accuracy
@@ -19,10 +19,10 @@
 4. Multi-class types improve element categorization
 
 ## Requirements
-- [ ] Few-shot examples in analyzeLayout prompt
-- [ ] Image preprocessing (standardize resolution)
-- [ ] Confidence field in schema + filtering
-- [ ] Improved element type detection
+- [x] Few-shot examples in analyzeLayout prompt
+- [x] Image preprocessing (standardize resolution)
+- [x] Confidence field in schema + filtering
+- [x] Improved element type detection
 
 ## Related Code Files
 | File | Lines | Purpose |
@@ -155,12 +155,12 @@ const processedElements = rawElements
 ```
 
 ## Todo List
-- [ ] Create utils/image-preprocessing.ts
-- [ ] Add confidence to types.ts
-- [ ] Update processImageSchema with confidence
-- [ ] Add few-shot example to prompt
-- [ ] Add confidence filtering
-- [ ] Apply preprocessing in analyzeLayout
+- [x] Create utils/image-preprocessing.ts
+- [x] Add confidence to types.ts
+- [x] Update processImageSchema with confidence
+- [x] Add few-shot example to prompt
+- [x] Add confidence filtering
+- [x] Apply preprocessing in analyzeLayout
 
 ## Success Criteria
 - Bounding boxes more precise with few-shot
