@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AISettings, ProviderConfig } from '../types';
+import { AISettings, ProviderConfig, HybridDetectionSettings } from '../types';
 import { testModel } from '../services/geminiService';
 
 interface SettingsModalProps {
@@ -199,6 +199,92 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, 
           
           <div className="bg-slate-100 dark:bg-slate-700/50 p-3 rounded text-xs text-slate-500 dark:text-slate-400">
              Tip: {activeTab === 'gemini' ? 'Gemini drawing model recommended: gemini-3-pro-image-preview or gemini-2.5-flash-image.' : 'OpenAI recognition model requires Vision support (e.g., gpt-4o). Drawing model requires Image Generation (e.g., dall-e-3).'}
+          </div>
+
+          {/* Advanced Settings Section */}
+          <div className="border-t border-slate-200 dark:border-slate-700 pt-4 mt-2">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Advanced Settings</h3>
+
+            {/* Confidence Threshold */}
+            <div className="mb-4">
+              <label className="block text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-1">
+                Confidence Threshold ({(settings.confidenceThreshold * 100).toFixed(0)}%)
+              </label>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={settings.confidenceThreshold * 100}
+                onChange={(e) => setSettings(prev => ({ ...prev, confidenceThreshold: parseInt(e.target.value) / 100 }))}
+                className="w-full h-2 bg-slate-200 dark:bg-slate-600 rounded-lg appearance-none cursor-pointer"
+              />
+              <p className="text-xs text-slate-400 mt-1">Filter elements below this confidence level</p>
+            </div>
+
+            {/* Multi-Pass Inpainting Toggle */}
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Multi-Pass Inpainting</label>
+                <p className="text-xs text-slate-400">2-pass text removal for higher quality (uses more API calls)</p>
+              </div>
+              <button
+                onClick={() => setSettings(prev => ({ ...prev, enableMultiPassInpainting: !prev.enableMultiPassInpainting }))}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.enableMultiPassInpainting ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-600'}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.enableMultiPassInpainting ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+
+            {/* Hybrid Detection Section */}
+            <div className="border-t border-slate-200 dark:border-slate-600 pt-3 mt-3">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Hybrid Detection (Beta)</label>
+                  <p className="text-xs text-slate-400">Use Tesseract.js for improved text box accuracy</p>
+                </div>
+                <button
+                  onClick={() => setSettings(prev => ({
+                    ...prev,
+                    hybridDetection: { ...prev.hybridDetection, enabled: !prev.hybridDetection.enabled }
+                  }))}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.hybridDetection?.enabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-600'}`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.hybridDetection?.enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
+              </div>
+
+              {settings.hybridDetection?.enabled && (
+                <div className="pl-4 space-y-2 border-l-2 border-blue-200 dark:border-blue-800">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-slate-600 dark:text-slate-400">Use Tesseract OCR</label>
+                    <button
+                      onClick={() => setSettings(prev => ({
+                        ...prev,
+                        hybridDetection: { ...prev.hybridDetection, useTesseract: !prev.hybridDetection.useTesseract }
+                      }))}
+                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${settings.hybridDetection?.useTesseract ? 'bg-green-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                    >
+                      <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${settings.hybridDetection?.useTesseract ? 'translate-x-5' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-slate-600 dark:text-slate-400">Prefer client-side boxes</label>
+                    <button
+                      onClick={() => setSettings(prev => ({
+                        ...prev,
+                        hybridDetection: { ...prev.hybridDetection, preferClientBoxes: !prev.hybridDetection.preferClientBoxes }
+                      }))}
+                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${settings.hybridDetection?.preferClientBoxes ? 'bg-green-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                    >
+                      <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${settings.hybridDetection?.preferClientBoxes ? 'translate-x-5' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                    Note: First use downloads ~15MB language data
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

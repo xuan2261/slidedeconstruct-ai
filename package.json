@@ -21,6 +21,7 @@
     "pptxgenjs": "^4.0.1",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
+    "tesseract.js": "^5.1.1",
     "vite": "^7.3.0"
   },
   "devDependencies": {

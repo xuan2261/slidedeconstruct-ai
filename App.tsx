@@ -5,11 +5,12 @@ import {
   SlideVisualElement, BoundingBox, AISettings, DEFAULT_AI_SETTINGS, 
   ReconstructedSlideResult, PPTShapeElement, SlideWorkspace, LayerVisibility 
 } from './types';
-import { 
-  analyzeLayout, processConfirmedLayout, refineElement, 
-  regenerateVisualElement, updateSettings, analyzeVisualToVector, 
-  eraseAreasFromImage 
+import {
+  analyzeLayout, processConfirmedLayout, refineElement,
+  regenerateVisualElement, updateSettings, analyzeVisualToVector,
+  eraseAreasFromImage
 } from './services/geminiService';
+import { terminateTesseract } from './services/tesseractService';
 import { processUploadedFiles } from './services/fileService';
 
 import UploadSection from './components/UploadSection';
@@ -54,6 +55,10 @@ const App: React.FC = () => {
   }, []);
 
   const handleSaveSettings = (newSettings: AISettings) => {
+      // Cleanup Tesseract worker if hybrid detection is being disabled
+      if (aiSettings.hybridDetection?.enabled && !newSettings.hybridDetection?.enabled) {
+        terminateTesseract().catch(err => console.warn('Failed to terminate Tesseract:', err));
+      }
       setAiSettings(newSettings);
       updateSettings(newSettings);
       localStorage.setItem('ai_settings', JSON.stringify(newSettings));

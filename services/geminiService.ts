@@ -2,6 +2,8 @@ import { GoogleGenAI, Type, GenerateContentResponse, HarmCategory, HarmBlockThre
 import { SlideAnalysisResult, ElementType, AISettings, DEFAULT_AI_SETTINGS, ProviderConfig, ReconstructedSlideResult, PPTShapeElement, BoundingBox, SlideVisualElement, SlideTextElement, PPTShapeType } from "../types";
 import { isValidBox, deduplicateElements, expandBox } from "../utils/box-validation";
 import { standardizeImage, extractBase64, getImageDimensions, generateMaskImage } from "../utils/image-preprocessing";
+import { extractTextBoxes, terminateTesseract } from "./tesseractService";
+import { fuseDetections, isTesseractResultValid, DEFAULT_FUSION_IOU_THRESHOLD } from "../utils/detection-fusion";
 
 // State to hold current settings
 let currentSettings: AISettings = { ...DEFAULT_AI_SETTINGS };
@@ -911,7 +913,40 @@ NOW ANALYZE THE PROVIDED IMAGE:
       })
       .filter((el: any) => isValidBox(el.box))
       .filter((el: any) => el.confidence >= getConfidenceThreshold());
-    const finalElements = deduplicateElements(processedElements);
+    let finalElements = deduplicateElements(processedElements);
+
+    // --- HYBRID DETECTION: Fuse with Tesseract if enabled ---
+    const hybridSettings = currentSettings.hybridDetection;
+    if (hybridSettings?.enabled && hybridSettings?.useTesseract) {
+      try {
+        // Run Tesseract OCR in parallel-safe manner
+        const tesseractElements = await extractTextBoxes(cleanBase64).catch(err => {
+          console.warn("Tesseract extraction failed, using Gemini-only:", err);
+          return [];
+        });
+
+        // Count TEXT elements from Gemini for validation
+        const geminiTextCount = finalElements.filter(el => el.type === ElementType.TEXT).length;
+
+        // Only fuse if Tesseract results are valid
+        if (isTesseractResultValid(tesseractElements, geminiTextCount)) {
+          const fusionResult = fuseDetections(
+            finalElements,
+            tesseractElements,
+            {
+              iouThreshold: DEFAULT_FUSION_IOU_THRESHOLD,
+              preferClientBoxes: hybridSettings.preferClientBoxes ?? true
+            }
+          );
+          finalElements = fusionResult.elements;
+          console.log(`Hybrid detection: ${fusionResult.source}`, fusionResult.stats);
+        } else {
+          console.log("Tesseract results invalid, using Gemini-only");
+        }
+      } catch (hybridError) {
+        console.warn("Hybrid detection failed, using Gemini-only:", hybridError);
+      }
+    }
 
     return {
         backgroundColor: analysisData.backgroundColor || '#ffffff',

@@ -21,7 +21,7 @@ slidedeconstruct-ai/
 ├── index.tsx               # React entry point
 ├── index.html              # HTML template (lang="en")
 ├── types.ts                # TypeScript type definitions
-├── vite.config.ts          # Vite configuration (English comments)
+├── vite.config.ts          # Vite configuration
 ├── tsconfig.json           # TypeScript configuration
 ├── package.json            # Dependencies and scripts
 ├── components/             # React UI components
@@ -33,12 +33,15 @@ slidedeconstruct-ai/
 │   ├── SlideSidebar.tsx
 │   ├── UploadSection.tsx
 │   └── VectorLayerList.tsx
-├── services/               # Business logic services (English messages)
-│   ├── geminiService.ts    # AI provider integration
-│   └── fileService.ts      # File processing (English error messages)
+├── services/               # Business logic services
+│   ├── geminiService.ts    # AI provider integration (supports hybrid detection)
+│   ├── tesseractService.ts # Tesseract.js OCR worker management
+│   └── fileService.ts      # File processing
 ├── utils/                  # Utility functions
 │   ├── box-validation.ts   # Bounding box validation & deduplication
-│   └── box-validation.test.ts # Unit tests (26 tests, 100% coverage)
+│   ├── box-validation.test.ts # Unit tests (26 tests)
+│   ├── detection-fusion.ts # Gemini + Tesseract detection fusion
+│   └── detection-fusion.test.ts # Fusion unit tests (15 tests)
 └── docs/                   # Documentation
 ```
 
@@ -71,121 +74,22 @@ Main application orchestrator.
 
 ---
 
-### CorrectionCanvas.tsx (384 LOC)
-Interactive canvas for bounding box correction after AI analysis.
-
-**Features:**
-- Drag to move/resize boxes
-- Right-click context menu (change type, delete)
-- Draw new boxes on empty areas
-- Confirm/Cancel actions
-
-**Props:**
-```typescript
-{
-  imageSrc: string;
-  elements: (SlideTextElement | SlideVisualElement)[];
-  onElementsChange: (elements) => void;
-  onConfirm: () => void;
-  onCancel: () => void;
-}
-```
-
----
-
-### EditorCanvas.tsx (299 LOC)
-Main canvas for viewing processed slides with layer controls.
-
-**Features:**
-- 5 z-index layers: background, cleaned image, visuals, text, selection
-- Erasure mode overlay
-- Element selection and dragging
-
-**Props:**
-```typescript
-{
-  imageSrc: string;
-  data: SlideAnalysisResult;
-  selectedId: string | null;
-  visibleLayers: LayerVisibility;
-  isErasureMode: boolean;
-  erasureBoxes: BoundingBox[];
-  onSelect: (id) => void;
-  onUpdateElement: (id, box) => void;
-  onAddErasureBox: (box) => void;
-}
-```
-
----
-
-### LayerList.tsx (270 LOC)
-Right panel for layer management and AI actions.
-
-**Features:**
-- Toggle layer visibility (text, visual, background)
-- Erasure mode toggle
-- Per-element actions: refine, modify, delete
-- Visual element history navigation
-
----
-
-### ReconstructionCanvas.tsx (255 LOC)
-Canvas for vector mode preview.
-
-**Features:**
-- Renders PPT shapes as SVG equivalents
-- Shape type mapping (rect, ellipse, arrow, etc.)
-- Text overlay rendering
-- Fallback image display
-
----
-
-### SettingsModal.tsx (232 LOC)
+### SettingsModal.tsx
 Modal for AI provider configuration.
 
 **Features:**
 - Provider tabs (Gemini, OpenAI)
 - API key, base URL, model name inputs
 - Connection test per model type
+- Hybrid detection settings (beta) - Phase 4
 - Save to localStorage
-
----
-
-### SlideSidebar.tsx (113 LOC)
-Left sidebar for multi-slide navigation.
-
-**Features:**
-- Thumbnail grid
-- Status indicator per slide
-- Add more files button
-- Remove slide button
-
----
-
-### VectorLayerList.tsx (100 LOC)
-Right panel for vector mode layer management.
-
-**Features:**
-- List shapes, texts, fallback images
-- Toggle visibility
-- Regenerate vector analysis
-
----
-
-### UploadSection.tsx (48 LOC)
-Drag-and-drop upload zone.
-
-**Features:**
-- File input trigger
-- Drag-over styling
-- Accepts PDF, PNG, JPG
 
 ---
 
 ## Services
 
-### geminiService.ts (868 LOC)
-Dual-provider AI integration layer.
+### geminiService.ts
+Dual-provider AI integration layer with optional hybrid detection.
 
 **Exported Functions:**
 
@@ -194,40 +98,41 @@ Dual-provider AI integration layer.
 | `updateSettings(settings)` | Update active AI config |
 | `getSettings()` | Get current config |
 | `testModel(type, provider, config)` | Test API connection |
-| `analyzeLayout(base64Image)` | Step 1: Detect elements |
-| `processConfirmedLayout(image, elements, bgColor)` | Step 3: Remove text |
+| `analyzeLayout(base64Image)` | Detect elements (optionally fuses with Tesseract) |
+| `processConfirmedLayout(image, elements, bgColor)` | Remove text |
 | `removeTextFromImage(image, textElements)` | Surgical text erasure |
 | `eraseAreasFromImage(image, boxes)` | Manual region erasure |
 | `regenerateVisualElement(image, instruction)` | AI image modification |
 | `refineElement(image, instruction)` | Split element into sub-elements |
 | `analyzeVisualToVector(image)` | Determine if vectorizable |
 
-**Internal Helpers:**
-- `cleanJsonString()` - Strip markdown from JSON
-- `tryParseJSON()` - Parse with repair attempts
-- `normalizeElement()` - Standardize element format
-- `callGeminiWithRetry()` - Rate limit handling
-- `callOpenAIChat()` - OpenAI chat completion
-- `callOpenAIImageGen()` - OpenAI/DALL-E image generation
+---
+
+### tesseractService.ts (119 LOC)
+Tesseract.js OCR worker management for hybrid detection (Phase 4).
+
+**Exported Functions:**
+
+| Function | Purpose |
+|----------|---------|
+| `initTesseract()` | Lazy-load Tesseract worker (~15MB on first use) |
+| `extractTextBoxes(imageBase64)` | OCR text detection with bounding boxes |
+| `terminateTesseract()` | Clean up worker resources |
+| `isTesseractReady()` | Check worker initialization status |
+
+**Features:**
+- Promise-based lock prevents race conditions
+- Returns percentage coordinates (0-100%)
+- Filters low-confidence results (< 60%)
 
 ---
 
 ### fileService.ts (82 LOC)
 File upload processing.
 
-**Exported Functions:**
-
 | Function | Purpose |
 |----------|---------|
 | `processUploadedFiles(files)` | Convert files to base64 images |
-
-**Internal Helpers:**
-- `readFileAsBase64()` - File to data URL
-- `renderPdfToImages()` - PDF pages to PNG
-
-**PDF Processing:**
-- Uses `pdfjs-dist` with web worker
-- Renders at 2x scale for quality
 
 ---
 
@@ -236,8 +141,6 @@ File upload processing.
 ### box-validation.ts (63 LOC)
 Bounding box validation and deduplication utilities.
 
-**Exported Functions:**
-
 | Function | Purpose |
 |----------|---------|
 | `isValidBox(box)` | Validates coordinates (0-100% range, min 0.5% size) |
@@ -245,93 +148,32 @@ Bounding box validation and deduplication utilities.
 | `expandBox(box, padding)` | Expands box by padding % (default 0.5%) |
 | `deduplicateElements(elements, threshold)` | Removes duplicates based on IoU threshold (default 0.8) |
 
-**Usage in geminiService.ts:**
-- `analyzeLayout()` - validates and deduplicates AI-detected elements
-- `removeTextFromImage()` - expands text boxes to ensure complete removal
+---
+
+### detection-fusion.ts (145 LOC)
+Fusion logic for hybrid detection - Gemini + Tesseract (Phase 4).
+
+| Function | Purpose |
+|----------|---------|
+| `fuseDetections(gemini, tesseract, options)` | Merge detections using IoU matching |
+| `isTesseractResultValid(tesseract, geminiCount)` | Validate Tesseract results before fusion |
+
+**Fusion Strategy:**
+- Keep all VISUAL elements from Gemini (Tesseract only detects text)
+- For TEXT elements, prefer Tesseract bounding boxes when IoU match found
+- Add unmatched Tesseract detections as new elements
+- Default IoU threshold: 0.3
 
 ---
 
 ## Key Types (types.ts)
 
-### Element Types
+### Hybrid Detection Settings (Phase 4)
 ```typescript
-enum ElementType { TEXT, VISUAL }
-
-interface BoundingBox {
-  top: number;    // 0-100%
-  left: number;   // 0-100%
-  width: number;  // 0-100%
-  height: number; // 0-100%
-}
-
-interface SlideTextElement {
-  id: string;
-  type: ElementType.TEXT;
-  content: string;
-  box: BoundingBox;
-  style: { fontSize, fontWeight, color, alignment };
-}
-
-interface SlideVisualElement {
-  id: string;
-  type: ElementType.VISUAL;
-  description: string;
-  box: BoundingBox;
-  originalBox: BoundingBox;
-  customImage?: string;
-  history?: string[];
-  historyIndex?: number;
-}
-```
-
-### Processing Types
-```typescript
-type ProcessingState =
-  | 'idle'
-  | 'analyzing'
-  | 'correcting'
-  | 'processing_final'
-  | 'complete'
-  | 'error';
-
-interface SlideAnalysisResult {
-  backgroundColor: string;
-  elements: (SlideTextElement | SlideVisualElement)[];
-  cleanedImage?: string | null;
-}
-```
-
-### Workspace Types
-```typescript
-interface SlideWorkspace {
-  id: string;
-  name: string;
-  originalImage: string;
-  thumbnail: string;
-  status: ProcessingState;
-  slideData: SlideAnalysisResult | null;
-  vectorData: ReconstructedSlideResult | null;
-  viewMode: 'image' | 'vector';
-  visibleLayers: LayerVisibility;
-  selectedElementId: string | null;
-  isErasureMode: boolean;
-  erasureBoxes: BoundingBox[];
-}
-```
-
-### Vector Types
-```typescript
-type PPTShapeType =
-  | 'rect' | 'roundRect' | 'ellipse' | 'triangle'
-  | 'arrowRight' | 'arrowLeft' | 'line' | 'star'
-  | 'pentagon' | 'hexagon' | 'diamond' | 'callout';
-
-interface PPTShapeElement {
-  id: string;
-  type: 'SHAPE';
-  shapeType: PPTShapeType;
-  box: BoundingBox;
-  style: { fillColor, strokeColor, strokeWidth, opacity };
+interface HybridDetectionSettings {
+  enabled: boolean;           // Master toggle (default: false)
+  useTesseract: boolean;      // Use Tesseract.js for text validation
+  preferClientBoxes: boolean; // Prefer Tesseract boxes over Gemini
 }
 ```
 
@@ -341,13 +183,33 @@ interface AISettings {
   currentProvider: 'gemini' | 'openai';
   gemini: ProviderConfig;
   openai: ProviderConfig;
+  confidenceThreshold: number;        // 0-1, filter low-confidence elements
+  enableMultiPassInpainting: boolean; // 2-pass inpainting
+  hybridDetection: HybridDetectionSettings; // Phase 4
+}
+```
+
+### Element Types
+```typescript
+interface SlideTextElement {
+  id: string;
+  type: ElementType.TEXT;
+  content: string;
+  box: BoundingBox;
+  style: { fontSize, fontWeight, color, alignment };
+  confidence?: number; // 0-1
 }
 
-interface ProviderConfig {
-  apiKey: string;
-  baseUrl: string;
-  recognitionModel: string;
-  drawingModel: string;
+interface SlideVisualElement {
+  id: string;
+  type: ElementType.VISUAL;
+  description: string;
+  box: BoundingBox;
+  originalBox: BoundingBox;
+  confidence?: number; // 0-1
+  customImage?: string;
+  history?: string[];
+  historyIndex?: number;
 }
 ```
 
@@ -360,18 +222,15 @@ interface ProviderConfig {
 | react | ^19.2.3 | UI framework |
 | react-dom | ^19.2.3 | React DOM renderer |
 | @google/genai | ^1.34.0 | Gemini AI SDK |
+| tesseract.js | ^6.x | Client-side OCR (hybrid detection) |
 | pptxgenjs | ^4.0.1 | PPT file generation |
 | pdfjs-dist | ^5.4.449 | PDF rendering |
-| vite | ^7.3.0 | Build tool (production) |
+| vite | ^7.3.0 | Build tool |
 | typescript | ~5.8.2 | Type checking |
-| @vitejs/plugin-react | ^5.1.2 | React plugin for Vite |
-| tailwindcss | (CDN) | Styling |
-| vitest | (dev) | Unit testing framework |
-| @vitest/coverage-v8 | (dev) | Test coverage reporting |
+| vitest | (dev) | Unit testing (41 tests total) |
 
 **NPM Scripts:**
 - `npm test` - Run unit tests
 - `npm run test:coverage` - Run tests with coverage report
-- `npm run test:watch` - Run tests in watch mode
 
 *Last verified: January 2026*

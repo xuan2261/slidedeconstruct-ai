@@ -59,12 +59,19 @@ export interface ProviderConfig {
   drawingModel: string;
 }
 
+export interface HybridDetectionSettings {
+  enabled: boolean; // Master toggle for hybrid detection
+  useTesseract: boolean; // Use Tesseract.js for text box validation
+  preferClientBoxes: boolean; // Prefer Tesseract boxes over Gemini for TEXT elements
+}
+
 export interface AISettings {
   currentProvider: 'gemini' | 'openai';
   gemini: ProviderConfig;
   openai: ProviderConfig;
   confidenceThreshold: number; // 0-1, filter elements below this confidence
   enableMultiPassInpainting: boolean; // Enable 2-pass inpainting for higher quality (doubles API cost)
+  hybridDetection: HybridDetectionSettings; // Hybrid detection settings
 }
 
 export const DEFAULT_AI_SETTINGS: AISettings = {
@@ -83,6 +90,11 @@ export const DEFAULT_AI_SETTINGS: AISettings = {
   },
   confidenceThreshold: 0.6,
   enableMultiPassInpainting: true, // Default enabled for best quality
+  hybridDetection: {
+    enabled: false, // Disabled by default (optional enhancement)
+    useTesseract: true, // Use Tesseract when hybrid enabled
+    preferClientBoxes: true, // Prefer Tesseract's tighter boxes for text
+  },
 };
 
 // --- Vector / Reconstructed Types ---

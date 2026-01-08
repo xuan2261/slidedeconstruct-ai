@@ -1,7 +1,7 @@
 ---
 title: "AI Accuracy Improvements"
 description: "Improve layout detection, bounding box precision, and text removal quality"
-status: in-progress
+status: completed
 priority: P1
 effort: 40h
 branch: main
@@ -32,7 +32,7 @@ Improve SlideDeconstruct AI accuracy metrics:
 | [Phase 1](phase-01-quick-wins.md) | P0: Coordinate fix, padding, validation | 4h | done |
 | [Phase 2](phase-02-enhanced-prompts.md) | P1: Few-shot, preprocessing, confidence | 8h | done |
 | [Phase 3](phase-03-advanced-inpainting.md) | P2: Mask-based, multi-pass inpainting | 12h | done |
-| [Phase 4](phase-04-hybrid-detection.md) | P3: Tesseract.js, optional YOLO | 16h | pending |
+| [Phase 4](phase-04-hybrid-detection.md) | P3: Tesseract.js, optional YOLO | 16h | done |
 
 ## Files to Modify
 
@@ -74,3 +74,13 @@ Improve SlideDeconstruct AI accuracy metrics:
 - [x] Phase 1 implementation completed (2026-01-09)
 - [x] Phase 2 implementation completed (2026-01-09)
 - [x] Phase 3 implementation completed (2026-01-09)
+- [x] Phase 4 implementation completed (2026-01-09) - Score: 8/10
+
+## Final Notes
+All 4 phases completed. Review report: [code-reviewer-260109-0354-phase4-hybrid-detection.md](reports/code-reviewer-260109-0354-phase4-hybrid-detection.md)
+
+### Recommended Follow-ups (from Phase 4 review)
+1. Replace busy-wait with Promise-based lock in tesseractService.ts
+2. Add Tesseract worker cleanup on settings toggle
+3. Add unit tests for fusion logic
+4. Implement or remove unused `preferClientBoxes` setting
