@@ -197,7 +197,7 @@ const ReconstructionCanvas: React.FC<ReconstructionCanvasProps> = ({
          <div className="absolute inset-0 pointer-events-none z-0" style={{ backgroundColor }} />
 
          <div className="absolute -top-8 left-0 flex items-center gap-2">
-             <span className="text-sm font-bold text-white bg-indigo-500 px-2 py-1 rounded">可编辑模式 (Vector)</span>
+             <span className="text-sm font-bold text-white bg-indigo-500 px-2 py-1 rounded">Editable Mode (Vector)</span>
         </div>
 
          {/* Images Layer (Non-vector fallbacks) */}

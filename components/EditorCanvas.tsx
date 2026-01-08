@@ -184,8 +184,8 @@ const EditorCanvas: React.FC<EditorCanvasProps> = ({
         onMouseDown={(e) => handleMouseDown(e, null)} // Background click/draw
       >
         <div className="absolute -top-8 left-0 flex items-center gap-2">
-             <span className="text-sm font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">PPT 导出区域 (16:9)</span>
-             {isErasureMode && <span className="text-sm font-bold text-red-500 bg-red-100 px-2 py-1 rounded animate-pulse">擦除模式: 框选背景区域</span>}
+             <span className="text-sm font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">PPT Export Area (16:9)</span>
+             {isErasureMode && <span className="text-sm font-bold text-red-500 bg-red-100 px-2 py-1 rounded animate-pulse">Erase Mode: Select background area</span>}
         </div>
 
         {/* Background Layer - Uses cleaned image (no text) */}

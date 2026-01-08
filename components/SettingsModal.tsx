@@ -80,10 +80,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, 
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-lg p-0 border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="p-6 pb-2 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-           <h2 className="text-xl font-bold mb-4 text-slate-800 dark:text-white">AI 服务配置</h2>
+           <h2 className="text-xl font-bold mb-4 text-slate-800 dark:text-white">AI Service Settings</h2>
            
            <div className="flex items-center justify-between bg-white dark:bg-slate-700 p-1 rounded-lg border border-slate-200 dark:border-slate-600 mb-2">
-                <label className="text-sm font-medium px-3 text-slate-600 dark:text-slate-300">当前启用:</label>
+                <label className="text-sm font-medium px-3 text-slate-600 dark:text-slate-300">Active Provider:</label>
                 <select 
                     value={settings.currentProvider} 
                     onChange={handleProviderChange}
@@ -101,13 +101,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, 
                 onClick={() => handleTabChange('gemini')}
                 className={`flex-1 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === 'gemini' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}
              >
-                Google Gemini 设置
+                Google Gemini Settings
              </button>
              <button 
                 onClick={() => handleTabChange('openai')}
                 className={`flex-1 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === 'openai' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}
              >
-                OpenAI 设置
+                OpenAI Settings
              </button>
         </div>
         
@@ -142,7 +142,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, 
           <div className="grid grid-cols-1 gap-5">
              {/* Recognition Model Row */}
              <div>
-                <label className="block text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-1">识别模型 (Vision)</label>
+                <label className="block text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-1">Recognition Model (Vision)</label>
                 <div className="flex gap-2">
                     <input 
                         type="text" 
@@ -170,7 +170,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, 
 
              {/* Drawing Model Row */}
              <div>
-                <label className="block text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-1">绘图模型 (Image Gen)</label>
+                <label className="block text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-1">Drawing Model (Image Gen)</label>
                 <div className="flex gap-2">
                     <input 
                         type="text" 
@@ -198,7 +198,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, 
           </div>
           
           <div className="bg-slate-100 dark:bg-slate-700/50 p-3 rounded text-xs text-slate-500 dark:text-slate-400">
-             提示: {activeTab === 'gemini' ? 'Gemini 绘图模型建议使用 gemini-3-pro-image-preview 或 gemini-2.5-flash-image。' : 'OpenAI 识别模型需支持 Vision (如 gpt-4o)。绘图模型需支持 Image Generation (如 dall-e-3)。'}
+             Tip: {activeTab === 'gemini' ? 'Gemini drawing model recommended: gemini-3-pro-image-preview or gemini-2.5-flash-image.' : 'OpenAI recognition model requires Vision support (e.g., gpt-4o). Drawing model requires Image Generation (e.g., dall-e-3).'}
           </div>
         </div>
 
@@ -215,13 +215,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, 
                 onClick={onClose}
                 className="px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
               >
-                取消
+                Cancel
               </button>
               <button 
                 onClick={handleSave}
                 className="px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-md shadow-sm"
               >
-                保存配置
+                Save Settings
               </button>
             </div>
         </div>

@@ -27,19 +27,19 @@ const UploadSection: React.FC<UploadSectionProps> = ({ onFilesSelected }) => {
           </svg>
         </div>
         <div>
-          <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">上传演示文档或图片</h3>
+          <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">Upload Presentation or Image</h3>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
-             支持 <span className="font-semibold text-slate-700 dark:text-slate-200">PDF, 图片 (PNG/JPG)</span>
+             Supports <span className="font-semibold text-slate-700 dark:text-slate-200">PDF, Images (PNG/JPG)</span>
              <br/>
-             <span className="text-xs opacity-75">(PPT/PPTX 请先另存为 PDF 以获得最佳效果)</span>
+             <span className="text-xs opacity-75">(Export PPT/PPTX to PDF for best results)</span>
           </p>
           <div className="mt-4 inline-flex items-center gap-2 px-3 py-1 bg-slate-100 dark:bg-slate-700 rounded-full text-xs text-slate-600 dark:text-slate-300">
               <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-              支持批量上传 & Ctrl+V 粘贴
+              Batch upload & Ctrl+V paste supported
           </div>
         </div>
         <button className="px-6 py-3 bg-blue-600 text-white rounded-lg text-sm font-semibold shadow-md hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-all transform group-hover:translate-y-[-2px]">
-          选择文件
+          Select Files
         </button>
       </div>
     </div>

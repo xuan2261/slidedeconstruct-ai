@@ -25,8 +25,8 @@ const VectorLayerList: React.FC<VectorLayerListProps> = ({
   return (
     <div className="w-80 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 h-full flex flex-col shrink-0 z-40 shadow-xl">
        <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-indigo-50 dark:bg-indigo-900/20">
-        <h2 className="font-semibold text-indigo-900 dark:text-indigo-100">矢量图层管理</h2>
-        <p className="text-xs text-indigo-500 dark:text-indigo-300">可编辑元素 ({allElements.length})</p>
+        <h2 className="font-semibold text-indigo-900 dark:text-indigo-100">Vector Layer Management</h2>
+        <p className="text-xs text-indigo-500 dark:text-indigo-300">Editable Elements ({allElements.length})</p>
       </div>
 
       <div className="flex-1 overflow-y-auto p-2 space-y-1">
@@ -73,7 +73,7 @@ const VectorLayerList: React.FC<VectorLayerListProps> = ({
                                 onRegenerateVector(el.id);
                             }}
                             className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-500 dark:text-slate-400"
-                            title="重新生成矢量 (Retry Vectorize)"
+                            title="Regenerate Vector"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />

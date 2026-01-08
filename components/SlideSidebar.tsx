@@ -29,7 +29,7 @@ const SlideSidebar: React.FC<SlideSidebarProps> = ({
   return (
     <div className="w-56 flex flex-col bg-slate-100 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 h-full shrink-0 z-40 select-none">
       <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-        <h2 className="font-bold text-slate-800 dark:text-slate-100 text-sm">页面列表 ({slides.length})</h2>
+        <h2 className="font-bold text-slate-800 dark:text-slate-100 text-sm">Slide List ({slides.length})</h2>
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-3">
@@ -80,7 +80,7 @@ const SlideSidebar: React.FC<SlideSidebarProps> = ({
                             onRemoveSlide(slide.id);
                         }}
                         className="absolute bottom-1 right-1 bg-white/90 dark:bg-slate-800/90 text-slate-500 hover:text-red-500 rounded p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
-                        title="删除页面"
+                        title="Delete Slide"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -97,7 +97,7 @@ const SlideSidebar: React.FC<SlideSidebarProps> = ({
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                 </svg>
-                添加页面
+                Add Slides
                 <input 
                     type="file" 
                     multiple 
