@@ -10,8 +10,9 @@
 | Field | Value |
 |-------|-------|
 | Priority | P1 |
-| Status | pending |
+| Status | ✅ DONE |
 | Effort | 2h |
+| Completed | 2026-01-09 06:30 |
 | Description | Add Anthropic SDK client, response extraction, and provider routing |
 
 ## Key Insights
@@ -24,13 +25,13 @@
 
 ## Requirements
 
-- [ ] Install `@anthropic-ai/sdk` package
-- [ ] Add `getAnthropicClient()` function
-- [ ] Add `callAnthropicChat()` for text/vision tasks
-- [ ] Add `callAnthropicImageGen()` for image generation
-- [ ] Add `extractAnthropicContent()` for response normalization
-- [ ] Update provider routing in all AI functions
-- [ ] Update `testModel()` for Anthropic
+- [x] Install `@anthropic-ai/sdk` package
+- [x] Add `getAnthropicClient()` function
+- [x] Add `callAnthropicChat()` for text/vision tasks
+- [x] Add `callAnthropicImageGen()` for image generation
+- [x] Add `extractAnthropicContent()` for response normalization
+- [x] Update provider routing in all AI functions
+- [x] Update `testModel()` for Anthropic
 
 ## Related Code Files
 
@@ -250,11 +251,11 @@ export const testModel = async (
 
 ## Success Criteria
 
-- [ ] Anthropic SDK installed without errors
-- [ ] `callAnthropicChat()` returns text/image correctly
-- [ ] Provider routing works for all functions
-- [ ] `testModel()` validates Anthropic connection
-- [ ] No TypeScript errors
+- [x] Anthropic SDK installed without errors
+- [x] `callAnthropicChat()` returns text/image correctly
+- [x] Provider routing works for all functions
+- [x] `testModel()` validates Anthropic connection
+- [x] No TypeScript errors
 
 ## Risk Assessment
 

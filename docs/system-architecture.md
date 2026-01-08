@@ -133,7 +133,7 @@ User drops file
 
 ## AI Integration Architecture
 
-### Multi-Provider Support (Dual Architecture)
+### Multi-Provider Support (Tri-Provider Architecture)
 
 The system supports **per-task provider selection** - different providers for recognition vs drawing tasks.
 
@@ -144,8 +144,8 @@ The system supports **per-task provider selection** - different providers for re
 │  ┌───────────────┐  ┌───────────────┐  ┌───────────────────────┐ │
 │  │ Gemini Path   │  │ OpenAI Path   │  │ Anthropic Path        │ │
 │  │               │  │               │  │                       │ │
-│  │ GoogleGenAI   │  │ fetch() REST  │  │ fetch() REST          │ │
-│  │ SDK           │  │ /completions  │  │ /messages (via proxy) │ │
+│  │ GoogleGenAI   │  │ fetch() REST  │  │ Anthropic SDK         │ │
+│  │ SDK           │  │ /completions  │  │ via proxy (localhost) │ │
 │  └───────┬───────┘  └───────┬───────┘  └───────────┬───────────┘ │
 │          │                  │                      │              │
 │          └──────────────────┼──────────────────────┘              │
@@ -162,6 +162,17 @@ The system supports **per-task provider selection** - different providers for re
 | `recognitionProvider` | Provider for layout analysis, text detection, vector analysis |
 | `drawingProvider` | Provider for inpainting, text removal, image generation |
 | `currentProvider` | **Deprecated** - kept for backward compat via `migrateSettings()` |
+
+### Anthropic Integration Details (Phase 2)
+
+| Component | Implementation |
+|-----------|----------------|
+| Client | `@anthropic-ai/sdk` with `dangerouslyAllowBrowser: true` |
+| Base URL | Default: `http://127.0.0.1:8045` (localhost proxy) |
+| Security | Warns on non-localhost URLs (API key exposure risk) |
+| Retry | `callAnthropicWithRetry()` - 3 retries, exponential backoff |
+| Vision | Image-first content ordering for vision requests |
+| Image Gen | Depends on proxy capabilities (native API doesn't support) |
 
 ### AI Function Mapping
 

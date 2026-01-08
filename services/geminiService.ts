@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type, GenerateContentResponse, HarmCategory, HarmBlockThreshold, Schema } from "@google/genai";
-import { SlideAnalysisResult, ElementType, AISettings, DEFAULT_AI_SETTINGS, ProviderConfig, ReconstructedSlideResult, PPTShapeElement, BoundingBox, SlideVisualElement, SlideTextElement, PPTShapeType } from "../types";
+import Anthropic from '@anthropic-ai/sdk';
+import { SlideAnalysisResult, ElementType, AISettings, DEFAULT_AI_SETTINGS, ProviderConfig, ReconstructedSlideResult, PPTShapeElement, BoundingBox, SlideVisualElement, SlideTextElement, PPTShapeType, ProviderType } from "../types";
 import { isValidBox, deduplicateElements, expandBox } from "../utils/box-validation";
 import { standardizeImage, extractBase64, getImageDimensions, generateMaskImage } from "../utils/image-preprocessing";
 import { extractTextBoxes, terminateTesseract } from "./tesseractService";
@@ -356,15 +357,151 @@ const getGeminiClient = (overrideConfig?: ProviderConfig) => {
     return new GoogleGenAI(options);
 };
 
+// --- Anthropic Client and Helpers ---
+
+const getAnthropicClient = (overrideConfig?: ProviderConfig) => {
+    const config = overrideConfig || currentSettings.anthropic;
+    if (!config.apiKey) throw new Error("Anthropic API Key is missing.");
+
+    const baseURL = config.baseUrl || 'http://127.0.0.1:8045';
+
+    // Security warning for non-localhost proxy URLs
+    if (baseURL && !baseURL.includes('127.0.0.1') && !baseURL.includes('localhost')) {
+        console.warn(`[Security Warning] Anthropic baseURL is set to external host: ${baseURL}. API key may be exposed.`);
+    }
+
+    return new Anthropic({
+        apiKey: config.apiKey,
+        baseURL,
+        dangerouslyAllowBrowser: true,
+    });
+};
+
+interface AnthropicContentBlock {
+    type: 'text' | 'image';
+    text?: string;
+    source?: { type: string; media_type: string; data: string };
+}
+
+// Type guard for Anthropic content blocks
+const isAnthropicContentBlock = (block: unknown): block is AnthropicContentBlock => {
+    return typeof block === 'object' && block !== null && 'type' in block &&
+           (block.type === 'text' || block.type === 'image');
+};
+
+// Retry wrapper for Anthropic API calls (mirrors callGeminiWithRetry)
+const callAnthropicWithRetry = async <T>(
+    fn: () => Promise<T>,
+    retries = 3,
+    delay = 2000
+): Promise<T> => {
+    try {
+        return await fn();
+    } catch (error: any) {
+        const isRateLimit =
+            error?.status === 429 ||
+            error?.error?.type === 'rate_limit_error' ||
+            (typeof error?.message === 'string' && (
+                error.message.includes('429') ||
+                error.message.includes('rate_limit') ||
+                error.message.includes('overloaded')
+            ));
+
+        if (isRateLimit && retries > 0) {
+            console.warn(`Anthropic rate limit hit. Retrying in ${delay}ms... (${retries} remaining)`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            return callAnthropicWithRetry(fn, retries - 1, delay * 2);
+        }
+        throw error;
+    }
+};
+
+const callAnthropicChat = async (
+    systemPrompt: string,
+    userPrompt: string,
+    imageBase64?: string,
+    model?: string
+): Promise<{ text: string | null; image: string | null }> => {
+    const config = currentSettings.anthropic;
+    const client = getAnthropicClient();
+
+    const content: any[] = [];
+
+    // Image must come before text for vision models
+    if (imageBase64) {
+        content.push({
+            type: 'image',
+            source: {
+                type: 'base64',
+                media_type: 'image/png',
+                data: imageBase64,
+            },
+        });
+    }
+
+    content.push({ type: 'text', text: userPrompt });
+
+    const response = await callAnthropicWithRetry(() => client.messages.create({
+        model: model || config.recognitionModel,
+        max_tokens: 16384,
+        system: systemPrompt,
+        messages: [{ role: 'user', content }],
+    }));
+
+    // Extract content from response with type guard
+    let text: string | null = null;
+    let image: string | null = null;
+
+    for (const block of response.content) {
+        if (isAnthropicContentBlock(block)) {
+            if (block.type === 'text') {
+                text = block.text || null;
+            } else if (block.type === 'image') {
+                image = block.source?.data || null;
+            }
+        }
+    }
+
+    // Note: Native Anthropic API does not support image generation.
+    // Image output depends on proxy capabilities (e.g., Antigravity proxy with Gemini backend).
+
+    return { text, image };
+};
+
+// --- Provider Routing Helpers ---
+
+const getRecognitionProvider = (): ProviderType =>
+    currentSettings.recognitionProvider || currentSettings.currentProvider;
+
+const getDrawingProvider = (): ProviderType =>
+    currentSettings.drawingProvider || currentSettings.currentProvider;
+
 export const testModel = async (
     type: 'recognition' | 'drawing',
-    provider: 'gemini' | 'openai',
+    provider: ProviderType,
     config: ProviderConfig
 ): Promise<{ success: boolean; message: string }> => {
     try {
         if (!config.apiKey) return { success: false, message: "API Key Missing" };
 
-        if (provider === 'gemini') {
+        if (provider === 'anthropic') {
+            const client = getAnthropicClient(config);
+            const modelName = type === 'recognition' ? config.recognitionModel : config.drawingModel;
+            if (!modelName) return { success: false, message: "Model Name Missing" };
+
+            try {
+                await client.messages.create({
+                    model: modelName,
+                    max_tokens: 10,
+                    messages: [{ role: 'user', content: 'Hello' }],
+                });
+                return { success: true, message: "Connected" };
+            } catch (e: any) {
+                if (e.status === 401) return { success: false, message: "401 Unauthorized" };
+                if (e.status === 404) return { success: false, message: `Model '${modelName}' not found` };
+                throw e;
+            }
+        } else if (provider === 'gemini') {
             const ai = getGeminiClient(config);
             const modelName = type === 'recognition' ? config.recognitionModel : config.drawingModel;
             if (!modelName) return { success: false, message: "Model Name Missing" };
@@ -454,7 +591,9 @@ CRITICAL RULES:
 Output ONLY the processed image with text removed and background filled.`;
 
   try {
-    if (currentSettings.currentProvider === 'gemini') {
+    const provider = getDrawingProvider();
+
+    if (provider === 'gemini') {
         const ai = getGeminiClient();
         const response = await callGeminiWithRetry<GenerateContentResponse>(() => ai.models.generateContent({
           model: currentSettings.gemini.drawingModel,
@@ -476,6 +615,16 @@ Output ONLY the processed image with text removed and background filled.`;
                 }
             }
         }
+    } else if (provider === 'anthropic') {
+        // Anthropic via proxy - send image + mask + prompt
+        // Note: Anthropic doesn't support native mask-based inpainting, use prompt-only approach
+        const result = await callAnthropicChat(
+            "Image Editor",
+            prompt,
+            cleanBase64,
+            currentSettings.anthropic.drawingModel
+        );
+        return result.image;
     } else {
         const config = currentSettings.openai;
         const isGeminiDrawing = config.drawingModel.toLowerCase().includes('gemini');
@@ -545,7 +694,9 @@ CRITICAL RULES:
 Output ONLY the refined image.`;
 
   try {
-    if (currentSettings.currentProvider === 'gemini') {
+    const provider = getDrawingProvider();
+
+    if (provider === 'gemini') {
       const ai = getGeminiClient();
       const response = await callGeminiWithRetry<GenerateContentResponse>(() => ai.models.generateContent({
         model: currentSettings.gemini.drawingModel,
@@ -567,8 +718,17 @@ Output ONLY the refined image.`;
           }
         }
       }
+    } else if (provider === 'anthropic') {
+      // Anthropic refinement pass
+      const result = await callAnthropicChat(
+          "Image Editor",
+          refinementPrompt,
+          pass1Result,
+          currentSettings.anthropic.drawingModel
+      );
+      if (result.image) return result.image;
     }
-    // For OpenAI, return pass 1 result (refinement pass not supported without image input)
+    // For OpenAI or fallback, return pass 1 result (refinement pass not supported without image input)
     return pass1Result;
   } catch (error) {
     console.warn("Pass 2 refinement failed, returning pass 1 result:", error);
@@ -637,7 +797,9 @@ export const eraseAreasFromImage = async (base64Image: string, boxes: BoundingBo
   prompt += " \n\nOutput ONLY the processed image.";
 
   try {
-    if (currentSettings.currentProvider === 'gemini') {
+    const provider = getDrawingProvider();
+
+    if (provider === 'gemini') {
         const ai = getGeminiClient();
         const response = await callGeminiWithRetry<GenerateContentResponse>(() => ai.models.generateContent({
           model: currentSettings.gemini.drawingModel,
@@ -658,6 +820,15 @@ export const eraseAreasFromImage = async (base64Image: string, boxes: BoundingBo
                 }
             }
         }
+    } else if (provider === 'anthropic') {
+        // Anthropic erasure
+        const result = await callAnthropicChat(
+            "Image Editor",
+            prompt,
+            cleanBase64,
+            currentSettings.anthropic.drawingModel
+        );
+        return result.image;
     } else {
         const config = currentSettings.openai;
         const isGeminiDrawing = config.drawingModel.toLowerCase().includes('gemini');
@@ -677,15 +848,19 @@ export const eraseAreasFromImage = async (base64Image: string, boxes: BoundingBo
 
 export const regenerateVisualElement = async (croppedBase64: string, instruction: string): Promise<string | null> => {
    const cleanBase64 = croppedBase64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
+   const editPrompt = `Edit this image: ${instruction}. Maintain exact aspect ratio and style. Output image only.`;
+
    try {
-     if (currentSettings.currentProvider === 'gemini') {
+     const provider = getDrawingProvider();
+
+     if (provider === 'gemini') {
          const ai = getGeminiClient();
          const response = await callGeminiWithRetry<GenerateContentResponse>(() => ai.models.generateContent({
            model: currentSettings.gemini.drawingModel,
            contents: {
              parts: [
                { inlineData: { mimeType: 'image/png', data: cleanBase64 } },
-               { text: `Edit this image: ${instruction}. Maintain exact aspect ratio and style. Output image only.` }
+               { text: editPrompt }
              ]
            },
            config: {
@@ -704,11 +879,20 @@ export const regenerateVisualElement = async (croppedBase64: string, instruction
                }
            }
          }
+     } else if (provider === 'anthropic') {
+         // Anthropic visual regeneration
+         const result = await callAnthropicChat(
+             "Image Editor",
+             editPrompt,
+             cleanBase64,
+             currentSettings.anthropic.drawingModel
+         );
+         return result.image;
      } else {
          const config = currentSettings.openai;
          const isGeminiDrawing = config.drawingModel.toLowerCase().includes('gemini');
          if (isGeminiDrawing) {
-             return await callOpenAIImageGen(`Edit this image: ${instruction}. Maintain exact aspect ratio and style. Output image only.`, cleanBase64);
+             return await callOpenAIImageGen(editPrompt, cleanBase64);
          } else {
              const description = await callOpenAIChat("Assistant", "Describe this image element.", cleanBase64);
              return await callOpenAIImageGen(`Image: ${description}. Modification: ${instruction}. White background.`);
@@ -744,7 +928,9 @@ export const refineElement = async (croppedBase64: string, instruction?: string)
 
   try {
     let jsonText = "";
-    if (currentSettings.currentProvider === 'gemini') {
+    const provider = getRecognitionProvider();
+
+    if (provider === 'gemini') {
         const ai = getGeminiClient();
         const response = await callGeminiWithRetry<GenerateContentResponse>(() => ai.models.generateContent({
           model: currentSettings.gemini.recognitionModel,
@@ -752,6 +938,14 @@ export const refineElement = async (croppedBase64: string, instruction?: string)
           config: { responseMimeType: "application/json" }
         }));
         jsonText = response.text || "";
+    } else if (provider === 'anthropic') {
+        const result = await callAnthropicChat(
+            "JSON Generator",
+            prompt + " Strictly output VALID JSON.",
+            cleanBase64,
+            currentSettings.anthropic.recognitionModel
+        );
+        jsonText = result.text || "";
     } else {
         jsonText = await callOpenAIChat("JSON Generator", prompt, cleanBase64, true);
     }
@@ -860,18 +1054,50 @@ NOW ANALYZE THE PROVIDED IMAGE:
   `;
 
   let jsonText = "";
+  const provider = getRecognitionProvider();
+
   try {
-    if (currentSettings.currentProvider === 'gemini') {
+    if (provider === 'gemini') {
         const ai = getGeminiClient();
         const analysisResponse = await callGeminiWithRetry<GenerateContentResponse>(() => ai.models.generateContent({
           model: currentSettings.gemini.recognitionModel,
           contents: { parts: [{ inlineData: { mimeType: 'image/png', data: cleanBase64 } }, { text: prompt + " Strictly follow the JSON schema." }] },
-          config: { 
+          config: {
               responseMimeType: "application/json",
               responseSchema: processImageSchema
           }
         }));
         jsonText = analysisResponse.text || "";
+    } else if (provider === 'anthropic') {
+        // Anthropic via proxy - use callAnthropicChat
+        const anthropicPrompt = `${prompt}
+
+Strictly output VALID JSON with this structure (no markdown code blocks):
+{
+  "backgroundColor": "#ffffff",
+  "elements": [
+    {
+      "type": "TEXT",
+      "content": "string (for text)",
+      "description": "string (for visual)",
+      "confidence": 0.9,
+      "box": { "top": 10.5, "left": 10.2, "width": 50.0, "height": 20.1 },
+      "style": {
+        "fontSize": "medium",
+        "fontWeight": "normal",
+        "color": "#000000",
+        "alignment": "left"
+      }
+    }
+  ]
+}`;
+        const result = await callAnthropicChat(
+            "JSON Generator",
+            anthropicPrompt,
+            cleanBase64,
+            currentSettings.anthropic.recognitionModel
+        );
+        jsonText = result.text || "";
     } else {
         // OpenAI Prompt - Explicit JSON Example with confidence field
         const openAIPrompt = `${prompt}
@@ -1060,7 +1286,9 @@ export const analyzeVisualToVector = async (base64Image: string): Promise<{
 
     try {
         let jsonText = "";
-        if (currentSettings.currentProvider === 'gemini') {
+        const provider = getRecognitionProvider();
+
+        if (provider === 'gemini') {
             const ai = getGeminiClient();
             const response = await callGeminiWithRetry<GenerateContentResponse>(() => ai.models.generateContent({
                 model: currentSettings.gemini.recognitionModel,
@@ -1068,6 +1296,14 @@ export const analyzeVisualToVector = async (base64Image: string): Promise<{
                 config: { responseMimeType: "application/json" }
             }));
             jsonText = response.text || "";
+        } else if (provider === 'anthropic') {
+            const result = await callAnthropicChat(
+                "Shape Analyzer",
+                prompt + " Strictly output VALID JSON.",
+                cleanBase64,
+                currentSettings.anthropic.recognitionModel
+            );
+            jsonText = result.text || "";
         } else {
             jsonText = await callOpenAIChat("Shape Analyzer", prompt, cleanBase64, true);
         }

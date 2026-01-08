@@ -89,7 +89,7 @@ Modal for AI provider configuration.
 ## Services
 
 ### geminiService.ts
-Dual-provider AI integration layer with optional hybrid detection.
+Multi-provider AI integration layer (Gemini, OpenAI, Anthropic) with optional hybrid detection.
 
 **Exported Functions:**
 
@@ -97,7 +97,7 @@ Dual-provider AI integration layer with optional hybrid detection.
 |----------|---------|
 | `updateSettings(settings)` | Update active AI config |
 | `getSettings()` | Get current config |
-| `testModel(type, provider, config)` | Test API connection |
+| `testModel(type, provider, config)` | Test API connection (supports Anthropic) |
 | `analyzeLayout(base64Image)` | Detect elements (optionally fuses with Tesseract) |
 | `processConfirmedLayout(image, elements, bgColor)` | Remove text |
 | `removeTextFromImage(image, textElements)` | Surgical text erasure |
@@ -105,6 +105,16 @@ Dual-provider AI integration layer with optional hybrid detection.
 | `regenerateVisualElement(image, instruction)` | AI image modification |
 | `refineElement(image, instruction)` | Split element into sub-elements |
 | `analyzeVisualToVector(image)` | Determine if vectorizable |
+
+**Internal Helpers (Anthropic):**
+
+| Function | Purpose |
+|----------|---------|
+| `getAnthropicClient(config?)` | Create Anthropic SDK client (warns on non-localhost proxy) |
+| `callAnthropicWithRetry(fn, retries, delay)` | Retry wrapper for rate limits |
+| `callAnthropicChat(system, user, image?, model?)` | Text/vision requests via Anthropic |
+| `getRecognitionProvider()` | Route to recognition provider |
+| `getDrawingProvider()` | Route to drawing provider |
 
 ---
 
@@ -180,13 +190,18 @@ interface HybridDetectionSettings {
 ### Settings Types
 ```typescript
 interface AISettings {
-  currentProvider: 'gemini' | 'openai';
+  currentProvider: ProviderType;           // Deprecated, use per-task providers
+  recognitionProvider: ProviderType;       // Provider for layout/text detection
+  drawingProvider: ProviderType;           // Provider for inpainting/generation
   gemini: ProviderConfig;
   openai: ProviderConfig;
-  confidenceThreshold: number;        // 0-1, filter low-confidence elements
-  enableMultiPassInpainting: boolean; // 2-pass inpainting
+  anthropic: ProviderConfig;               // Phase 2: Anthropic integration
+  confidenceThreshold: number;             // 0-1, filter low-confidence elements
+  enableMultiPassInpainting: boolean;      // 2-pass inpainting
   hybridDetection: HybridDetectionSettings; // Phase 4
 }
+
+type ProviderType = 'gemini' | 'openai' | 'anthropic';
 ```
 
 ### Element Types
@@ -222,6 +237,7 @@ interface SlideVisualElement {
 | react | ^19.2.3 | UI framework |
 | react-dom | ^19.2.3 | React DOM renderer |
 | @google/genai | ^1.34.0 | Gemini AI SDK |
+| @anthropic-ai/sdk | ^x.x.x | Anthropic Claude SDK |
 | tesseract.js | ^6.x | Client-side OCR (hybrid detection) |
 | pptxgenjs | ^4.0.1 | PPT file generation |
 | pdfjs-dist | ^5.4.449 | PDF rendering |

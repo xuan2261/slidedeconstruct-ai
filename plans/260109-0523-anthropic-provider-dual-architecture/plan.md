@@ -34,7 +34,7 @@ Proposed: recognitionProvider -> analyzeLayout, refineElement, analyzeVisualToVe
 | Phase | Description | Effort | Files |
 |-------|-------------|--------|-------|
 | 1 | Types Update | 30m | `types.ts` | ✅ DONE |
-| 2 | Anthropic Integration | 2h | `services/geminiService.ts` |
+| 2 | Anthropic Integration | 2h | `services/geminiService.ts` | ✅ DONE |
 | 3 | Settings UI | 1h | `components/SettingsModal.tsx` |
 | 4 | Testing | 30m | Manual testing |
 
