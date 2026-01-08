@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type, GenerateContentResponse, HarmCategory, HarmBlockThreshold, Schema } from "@google/genai";
 import { SlideAnalysisResult, ElementType, AISettings, DEFAULT_AI_SETTINGS, ProviderConfig, ReconstructedSlideResult, PPTShapeElement, BoundingBox, SlideVisualElement, SlideTextElement, PPTShapeType } from "../types";
+import { isValidBox, deduplicateElements, expandBox } from "../utils/box-validation";
 
 // State to hold current settings
 let currentSettings: AISettings = { ...DEFAULT_AI_SETTINGS };
@@ -328,6 +329,13 @@ const getGeminiClient = (overrideConfig?: ProviderConfig) => {
     const config = overrideConfig || currentSettings.gemini;
     if (!config.apiKey) throw new Error("Gemini API Key is missing.");
     const options: any = { apiKey: config.apiKey };
+
+    // Apply custom base URL if provided (for proxy servers)
+    const defaultBaseUrl = 'https://generativelanguage.googleapis.com';
+    if (config.baseUrl && config.baseUrl !== defaultBaseUrl) {
+        options.httpOptions = { baseUrl: config.baseUrl };
+    }
+
     return new GoogleGenAI(options);
 };
 
@@ -404,14 +412,20 @@ export const testModel = async (
  */
 export const removeTextFromImage = async (base64Image: string, detectedElements: SlideTextElement[]): Promise<string | null> => {
   const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
-  
+
+  // Apply padding to text boxes to ensure shadows/edges are captured
+  const paddedElements = detectedElements.map(el => ({
+    ...el,
+    box: expandBox(el.box, 0.5)
+  }));
+
   // STRICTER PROMPT FOR SURGICAL REMOVAL
   let prompt = "Strictly preserve the original aspect ratio (16:9). You are an expert image editor performing surgical text removal.";
-  
-  if (detectedElements && detectedElements.length > 0) {
+
+  if (paddedElements && paddedElements.length > 0) {
       prompt += " \n\nCRITICAL INSTRUCTIONS:\n1. I have identified specific text regions below.\n2. You MUST erase content ONLY within these exact bounding boxes (coordinates 0-100%).\n3. DO NOT touch, blur, remove, or alter any other part of the image. Visual elements, icons, lines, and shapes outside these boxes must remain PIXEL-PERFECT identical to the original.\n";
-      
-      detectedElements.forEach((el, index) => {
+
+      paddedElements.forEach((el, index) => {
           const { top, left, width, height } = el.box;
           if (index < 30) {
               prompt += ` - Target Zone ${index + 1}: [Top: ${top.toFixed(2)}%, Left: ${left.toFixed(2)}%, Width: ${width.toFixed(2)}%, Height: ${height.toFixed(2)}%] (Content to erase: "${el.content.substring(0, 20)}...")\n`;
@@ -419,7 +433,7 @@ export const removeTextFromImage = async (base64Image: string, detectedElements:
       });
       prompt += "\nFill these erased text zones with the matching background color or texture of the immediate surrounding area. Do not hallucinate new objects.";
   }
-  
+
   prompt += " \n\nOutput ONLY the processed image.";
 
   try {
@@ -668,16 +682,21 @@ export const analyzeLayout = async (base64Image: string): Promise<SlideAnalysisR
 
   const prompt = `
     Analyze the layout of this PPT slide using STRICT GEOMETRY.
-    
+
     1. **Background**: Identify the dominant solid background color.
     2. **Elements Detection**: Identify ALL bounding boxes.
-    
-    IMPORTANT for Bounding Boxes:
-    - Draw the TIGHTEST possible bounding box around the actual visible pixels of the element.
+
+    COORDINATE FORMAT (CRITICAL):
+    - All values MUST be PERCENTAGES (0-100)
+    - Example: { "top": 15.5, "left": 10.2, "width": 50.0, "height": 20.1 }
+    - DO NOT use 0-1 normalized values
+    - DO NOT use 0-1000 pixel values
+
+    BOUNDING BOX RULES:
+    - Draw the TIGHTEST possible bounding box around the actual visible pixels.
     - EXCLUDE whitespace, transparent padding, or empty areas around icons/text.
     - If an element is at coordinates [10, 10], do NOT say [0, 0] just to be safe. Be precise.
     - Use decimal values (e.g. 15.5) for higher precision.
-    - Return coordinates in 0-100% relative to the image size.
   `;
 
   let jsonText = "";
@@ -722,11 +741,16 @@ export const analyzeLayout = async (base64Image: string): Promise<SlideAnalysisR
     const cleanedJson = cleanJsonString(jsonText);
     const analysisData = tryParseJSON(cleanedJson);
     const rawElements = findElementsArray(analysisData);
-    const processedElements = rawElements.map(normalizeElement);
+
+    // Apply normalization, validation, and deduplication
+    const processedElements = rawElements
+      .map((el: any, idx: number) => normalizeElement(el, idx))
+      .filter((el: any) => isValidBox(el.box));
+    const finalElements = deduplicateElements(processedElements);
 
     return {
         backgroundColor: analysisData.backgroundColor || '#ffffff',
-        elements: processedElements,
+        elements: finalElements,
         cleanedImage: null, // No inpainting yet
         rawResponse: jsonText
     };
