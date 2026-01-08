@@ -65,17 +65,34 @@ export interface HybridDetectionSettings {
   preferClientBoxes: boolean; // Prefer Tesseract boxes over Gemini for TEXT elements
 }
 
+// Provider type for per-task selection
+export type ProviderType = 'gemini' | 'openai' | 'anthropic';
+
 export interface AISettings {
-  currentProvider: 'gemini' | 'openai';
+  /**
+   * @deprecated Use recognitionProvider and drawingProvider instead.
+   * Kept for backward compatibility, will be removed in future.
+   */
+  currentProvider: ProviderType;
+
+  // Per-task provider selection
+  recognitionProvider: ProviderType;
+  drawingProvider: ProviderType;
+
+  // Provider configurations
   gemini: ProviderConfig;
   openai: ProviderConfig;
+  anthropic: ProviderConfig;
+
   confidenceThreshold: number; // 0-1, filter elements below this confidence
   enableMultiPassInpainting: boolean; // Enable 2-pass inpainting for higher quality (doubles API cost)
   hybridDetection: HybridDetectionSettings; // Hybrid detection settings
 }
 
 export const DEFAULT_AI_SETTINGS: AISettings = {
-  currentProvider: 'gemini',
+  currentProvider: 'gemini', // Legacy
+  recognitionProvider: 'gemini',
+  drawingProvider: 'gemini',
   gemini: {
     apiKey: '',
     baseUrl: 'https://generativelanguage.googleapis.com',
@@ -88,6 +105,12 @@ export const DEFAULT_AI_SETTINGS: AISettings = {
     recognitionModel: 'gpt-4o',
     drawingModel: 'dall-e-3',
   },
+  anthropic: {
+    apiKey: '',
+    baseUrl: 'http://127.0.0.1:8045', // Antigravity proxy default
+    recognitionModel: 'claude-sonnet-4-20250514',
+    drawingModel: 'claude-sonnet-4-20250514',
+  },
   confidenceThreshold: 0.6,
   enableMultiPassInpainting: true, // Default enabled for best quality
   hybridDetection: {
@@ -95,6 +118,24 @@ export const DEFAULT_AI_SETTINGS: AISettings = {
     useTesseract: true, // Use Tesseract when hybrid enabled
     preferClientBoxes: true, // Prefer Tesseract's tighter boxes for text
   },
+};
+
+// Helper to migrate old settings to new format (no mutation, no type assertion)
+export const migrateSettings = (old: Partial<AISettings>): AISettings => {
+  const merged = { ...DEFAULT_AI_SETTINGS, ...old };
+
+  // If old settings exist without new fields, use currentProvider for both
+  if (old.currentProvider && !old.recognitionProvider) {
+    merged.recognitionProvider = old.currentProvider;
+    merged.drawingProvider = old.currentProvider;
+  }
+
+  // Ensure anthropic config exists
+  if (!old.anthropic) {
+    merged.anthropic = DEFAULT_AI_SETTINGS.anthropic;
+  }
+
+  return merged;
 };
 
 // --- Vector / Reconstructed Types ---

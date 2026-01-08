@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import PptxGenJS from 'pptxgenjs';
-import { 
-  SlideAnalysisResult, ProcessingState, ElementType, SlideTextElement, 
-  SlideVisualElement, BoundingBox, AISettings, DEFAULT_AI_SETTINGS, 
-  ReconstructedSlideResult, PPTShapeElement, SlideWorkspace, LayerVisibility 
+import {
+  SlideAnalysisResult, ProcessingState, ElementType, SlideTextElement,
+  SlideVisualElement, BoundingBox, AISettings, DEFAULT_AI_SETTINGS,
+  ReconstructedSlideResult, PPTShapeElement, SlideWorkspace, LayerVisibility,
+  migrateSettings
 } from './types';
 import {
   analyzeLayout, processConfirmedLayout, refineElement,
@@ -46,8 +47,9 @@ const App: React.FC = () => {
       if (saved) {
           try {
               const parsed = JSON.parse(saved);
-              setAiSettings({ ...DEFAULT_AI_SETTINGS, ...parsed });
-              updateSettings({ ...DEFAULT_AI_SETTINGS, ...parsed });
+              const migrated = migrateSettings(parsed);
+              setAiSettings(migrated);
+              updateSettings(migrated);
           } catch (e) { console.error("Failed to load settings", e); }
       } else {
           updateSettings(DEFAULT_AI_SETTINGS);

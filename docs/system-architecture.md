@@ -133,26 +133,35 @@ User drops file
 
 ## AI Integration Architecture
 
-### Dual Provider Support
+### Multi-Provider Support (Dual Architecture)
+
+The system supports **per-task provider selection** - different providers for recognition vs drawing tasks.
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                   geminiService.ts                       │
-│                                                          │
-│  ┌─────────────────┐         ┌─────────────────┐        │
-│  │  Gemini Path    │         │  OpenAI Path    │        │
-│  │                 │         │                 │        │
-│  │ GoogleGenAI SDK │         │ fetch() REST    │        │
-│  │ - generateContent         │ - /chat/completions     │
-│  │ - responseSchema          │ - /images/generations   │
-│  └────────┬────────┘         └────────┬────────┘        │
-│           │                           │                  │
-│           └─────────┬─────────────────┘                  │
-│                     ▼                                    │
-│           currentSettings.currentProvider                │
-│           routes to appropriate path                     │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                      AI Provider Layer                            │
+│                                                                   │
+│  ┌───────────────┐  ┌───────────────┐  ┌───────────────────────┐ │
+│  │ Gemini Path   │  │ OpenAI Path   │  │ Anthropic Path        │ │
+│  │               │  │               │  │                       │ │
+│  │ GoogleGenAI   │  │ fetch() REST  │  │ fetch() REST          │ │
+│  │ SDK           │  │ /completions  │  │ /messages (via proxy) │ │
+│  └───────┬───────┘  └───────┬───────┘  └───────────┬───────────┘ │
+│          │                  │                      │              │
+│          └──────────────────┼──────────────────────┘              │
+│                             ▼                                     │
+│              recognitionProvider → Recognition tasks              │
+│              drawingProvider     → Drawing/inpainting tasks       │
+└──────────────────────────────────────────────────────────────────┘
 ```
+
+**ProviderType**: `'gemini' | 'openai' | 'anthropic'`
+
+| Field | Purpose |
+|-------|---------|
+| `recognitionProvider` | Provider for layout analysis, text detection, vector analysis |
+| `drawingProvider` | Provider for inpainting, text removal, image generation |
+| `currentProvider` | **Deprecated** - kept for backward compat via `migrateSettings()` |
 
 ### AI Function Mapping
 
@@ -226,7 +235,7 @@ isExporting: boolean
 isSettingsOpen: boolean
 
 // Configuration
-aiSettings: AISettings
+aiSettings: AISettings  // Loaded via migrateSettings() for backward compat
 isDarkMode: boolean
 ```
 
