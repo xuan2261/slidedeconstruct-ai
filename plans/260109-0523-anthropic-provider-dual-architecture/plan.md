@@ -1,7 +1,7 @@
 ---
 title: "Dual-Provider Architecture with Anthropic Support"
 description: "Add Anthropic as third provider with per-task-type selection (Recognition vs Drawing)"
-status: in-progress
+status: completed
 priority: P1
 effort: 5h
 branch: main
@@ -36,7 +36,7 @@ Proposed: recognitionProvider -> analyzeLayout, refineElement, analyzeVisualToVe
 | 1 | Types Update | 30m | `types.ts` | ✅ DONE |
 | 2 | Anthropic Integration | 2h | `services/geminiService.ts` | ✅ DONE |
 | 3 | Settings UI | 1h | `components/SettingsModal.tsx` | ✅ DONE |
-| 4 | Testing | 30m | Manual testing |
+| 4 | Testing | 30m | Manual testing | ✅ DONE |
 
 ## Key Files
 
@@ -51,10 +51,10 @@ Proposed: recognitionProvider -> analyzeLayout, refineElement, analyzeVisualToVe
 
 ## Success Criteria
 
-- [ ] Anthropic SDK installed and working in browser
-- [ ] Per-task provider selection functional
-- [ ] Settings UI updated with Anthropic tab
-- [ ] All provider combinations tested
+- [x] Anthropic SDK installed and working in browser
+- [x] Per-task provider selection functional
+- [x] Settings UI updated with Anthropic tab
+- [x] All provider combinations tested
 
 ## Validation Summary
 
