@@ -91,7 +91,7 @@ For best results:
 
 This project is licensed under the [MIT License](./LICENSE).
 
-Copyright © 2025 yyy-OPS. All Rights Reserved.
+Copyright © 2026 yyy-OPS. All Rights Reserved.
 
 **Disclaimer**: For learning and research purposes only. Do not use to deconstruct copyrighted commercial PPT templates for profit. Users are responsible for AI service costs.
 
