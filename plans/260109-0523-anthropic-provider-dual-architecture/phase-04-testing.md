@@ -196,5 +196,5 @@ Check browser console for:
 ## Known Limitations
 
 1. Anthropic native API doesn't support image generation - relies on proxy translating to Gemini
-2. Streaming not implemented (enhancement for future)
+2. Streaming implemented for recognition functions
 3. Tool use not implemented (not needed for current use case)

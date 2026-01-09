@@ -468,6 +468,81 @@ const callAnthropicChat = async (
     return { text, image };
 };
 
+// Streaming version of callAnthropicChat for long-running operations
+const callAnthropicChatStreaming = async (
+    systemPrompt: string,
+    userPrompt: string,
+    imageBase64?: string,
+    model?: string,
+    onTextDelta?: (delta: string, snapshot: string) => void
+): Promise<{ text: string | null; image: string | null }> => {
+    const config = currentSettings.anthropic;
+
+    // Build content array - use any[] for SDK compatibility
+    const content: any[] = [];
+
+    // Image must come before text for vision models
+    if (imageBase64) {
+        content.push({
+            type: 'image',
+            source: {
+                type: 'base64',
+                media_type: 'image/png' as const,
+                data: imageBase64,
+            },
+        });
+    }
+
+    content.push({ type: 'text', text: userPrompt });
+
+    // Wrap entire stream operation in retry for connection failures
+    return await callAnthropicWithRetry(async () => {
+        const client = getAnthropicClient();
+        let streamError: Error | null = null;
+
+        const stream = client.messages.stream({
+            model: model || config.recognitionModel,
+            max_tokens: 16384,
+            system: systemPrompt,
+            messages: [{ role: 'user', content }],
+        });
+
+        // Real-time text updates callback
+        if (onTextDelta) {
+            stream.on('text', onTextDelta);
+        }
+
+        // Capture stream errors for propagation
+        stream.on('error', (error) => {
+            console.error('[Anthropic Stream Error]:', error);
+            streamError = error instanceof Error ? error : new Error(String(error));
+        });
+
+        const finalMessage = await stream.finalMessage();
+
+        // Propagate any stream errors that occurred
+        if (streamError) {
+            throw streamError;
+        }
+
+        // Extract content from response
+        let text: string | null = null;
+        let image: string | null = null;
+
+        for (const block of finalMessage.content) {
+            if (isAnthropicContentBlock(block)) {
+                if (block.type === 'text') {
+                    text = block.text || null;
+                } else if (block.type === 'image') {
+                    image = block.source?.data || null;
+                }
+            }
+        }
+
+        return { text, image };
+    });
+};
+
 // --- Provider Routing Helpers ---
 
 const getRecognitionProvider = (): ProviderType =>
@@ -939,7 +1014,7 @@ export const refineElement = async (croppedBase64: string, instruction?: string)
         }));
         jsonText = response.text || "";
     } else if (provider === 'anthropic') {
-        const result = await callAnthropicChat(
+        const result = await callAnthropicChatStreaming(
             "JSON Generator",
             prompt + " Strictly output VALID JSON.",
             cleanBase64,
@@ -1069,7 +1144,7 @@ NOW ANALYZE THE PROVIDED IMAGE:
         }));
         jsonText = analysisResponse.text || "";
     } else if (provider === 'anthropic') {
-        // Anthropic via proxy - use callAnthropicChat
+        // Anthropic via proxy - use streaming for better UX
         const anthropicPrompt = `${prompt}
 
 Strictly output VALID JSON with this structure (no markdown code blocks):
@@ -1091,7 +1166,7 @@ Strictly output VALID JSON with this structure (no markdown code blocks):
     }
   ]
 }`;
-        const result = await callAnthropicChat(
+        const result = await callAnthropicChatStreaming(
             "JSON Generator",
             anthropicPrompt,
             cleanBase64,
@@ -1297,7 +1372,7 @@ export const analyzeVisualToVector = async (base64Image: string): Promise<{
             }));
             jsonText = response.text || "";
         } else if (provider === 'anthropic') {
-            const result = await callAnthropicChat(
+            const result = await callAnthropicChatStreaming(
                 "Shape Analyzer",
                 prompt + " Strictly output VALID JSON.",
                 cleanBase64,

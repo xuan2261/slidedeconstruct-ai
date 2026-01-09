@@ -37,6 +37,7 @@ Proposed: recognitionProvider -> analyzeLayout, refineElement, analyzeVisualToVe
 | 2 | Anthropic Integration | 2h | `services/geminiService.ts` | ✅ DONE |
 | 3 | Settings UI | 1h | `components/SettingsModal.tsx` | ✅ DONE |
 | 4 | Testing | 30m | Manual testing | ✅ DONE |
+| 5 | Streaming Support | 30m | `services/geminiService.ts` | ✅ DONE |
 
 ## Key Files
 
@@ -72,10 +73,10 @@ Proposed: recognitionProvider -> analyzeLayout, refineElement, analyzeVisualToVe
 
 ### Action Items
 
-- [ ] Update Phase 1: Set default models to `claude-sonnet-4-20250514`
-- [ ] Update Phase 2: Keep `currentProvider` as fallback in routing helpers
-- [ ] Update Phase 2: **Add streaming implementation** (new scope)
-- [ ] Update effort estimate: +1h for streaming
+- [x] Update Phase 1: Set default models to `claude-sonnet-4-20250514`
+- [x] Update Phase 2: Keep `currentProvider` as fallback in routing helpers
+- [x] Update Phase 2: **Add streaming implementation** (new scope)
+- [x] Update effort estimate: +1h for streaming
 
 ### Scope Change
 
